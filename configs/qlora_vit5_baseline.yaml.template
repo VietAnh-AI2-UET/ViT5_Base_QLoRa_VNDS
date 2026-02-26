@@ -1,0 +1,27 @@
+# Cấu hình Model & Dataset
+model:
+  model_name: "${MODEL_NAME:-VietAI/vit5-base}"
+  dataset_name: "${DATASET_NAME:-nam194/vietnews}"
+
+# Cấu hình lấy mẫu dữ liệu (Data Sampling)
+data:
+  train_samples: ${TRAIN_SAMPLES:-6000}
+  val_samples: ${VAL_SAMPLES:-1000}
+
+# Cấu hình kỹ thuật QLoRa
+lora:
+  lora_r: ${LORA_R:-8}
+  lora_alpha: ${LORA_ALPHA:-16}
+  lora_target_module: ${LORA_TARGET_MODULE:-['q', 'v']}
+  lora_dropout: ${LORA_DROPOUT:-0.05}
+
+# Cấu hình quá trình huấn luyện (Training Hyperparameters)
+training:
+  epochs: ${EPOCHS:-10}
+  batch_size: ${BATCH_SIZE:-4}
+  gradient_accumulation_steps: ${GRADIENT_ACCUMULATION_STEPS:-4}
+  learning_rate: ${LEARNING_RATE:-2e-4}
+  weight_decay: ${WEIGHT_DECAY:-0.01}
+  warmup_ratio: ${WARMUP_RATIO:-0.05}
+  label_smoothing_factor: ${LABEL_SMOOTHING_FACTOR:-0.1}
+  output_dir: "${OUTPUT_DIR:-./qlora_vit5_baseline}"
