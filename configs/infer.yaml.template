@@ -1,0 +1,12 @@
+model:
+  model_name: "${MODEL_NAME:-VietAI/vit5-base}"
+  dataset_name: "${DATASET_NAME:-nam194/vietnews}"
+  adapter_path: "${ADAPTER_PATH:-./qlora_vit5_baseline}"
+
+generation:
+  output_max_length: ${OUTPUT_MAX_LENGTH:-256}
+  output_min_length: ${OUTPUT_MIN_LENGTH:-20}
+  num_beams: ${NUM_BEAMS:-4}
+  no_repeat_ngram_size: ${NO_REPEAT_NGRAM_SIZE:-3}
+  repetition_penalty: ${REPETITION_PENALTY:-2.5}
+  length_penalty: ${LENGTH_PENALTY:-1.0}
