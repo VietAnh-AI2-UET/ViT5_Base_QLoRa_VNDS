@@ -20,7 +20,7 @@ training:
   epochs: ${EPOCHS:-10}
   batch_size: ${BATCH_SIZE:-4}
   gradient_accumulation_steps: ${GRADIENT_ACCUMULATION_STEPS:-4}
-  learning_rate: ${LEARNING_RATE:-2e-4}
+  learning_rate: ${LEARNING_RATE:-0.0002}
   weight_decay: ${WEIGHT_DECAY:-0.01}
   warmup_ratio: ${WARMUP_RATIO:-0.05}
   label_smoothing_factor: ${LABEL_SMOOTHING_FACTOR:-0.1}
