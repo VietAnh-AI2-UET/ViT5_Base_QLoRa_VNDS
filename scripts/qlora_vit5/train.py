@@ -30,6 +30,8 @@ def parse_args():
 def main():
     args = parse_args()
 
+    print("Start running train.py")
+
     # 0. Read YAML Configs
     with open(args.config, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
@@ -60,7 +62,7 @@ def main():
     # Output directory
     OUTPUT_DIR = config['training']['output_dir']
 
-    print(f"Bắt đầu quá trình huấn luyện với model: {MODEL_NAME}")
+    print(f"Step 0: Loading configuration for {MODEL_NAME} fine-tuning completed")
 
     # 1. Load Tokenizer & Dataset
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -69,6 +71,8 @@ def main():
     # Subsample dataset
     dataset["train"] = dataset["train"].shuffle(seed=42).select(range(TRAIN_SAMPLES))
     dataset["validation"] = dataset["validation"].shuffle(seed=42).select(range(VAL_SAMPLES))
+
+    print("Step 1: Loading tokenizer and dataset completed")
     
     # 2. Preprocess Data
     def preprocess_function(batch):
@@ -82,6 +86,8 @@ def main():
         return model_inputs
 
     tokenized_dataset = dataset.map(preprocess_function, batched=True)
+    
+    print("Step 2: Preprocessing dataset completed")
 
     # 3. Setup QLoRa Model
     bnb_config = BitsAndBytesConfig(
@@ -109,6 +115,8 @@ def main():
     model = get_peft_model(base_model, lora_config)
     model.print_trainable_parameters()      # <--- QLORA VIT5-BASE (baseline model)
 
+    print(F"Step 3: Setting up QLoRa {MODEL_NAME} completed")
+
     # 4. Training Arguments
     training_args = Seq2SeqTrainingArguments(
         output_dir="./vit5-base-qlora-checkpoints",
@@ -130,13 +138,15 @@ def main():
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
-        predict_with_generate=False, # Giữ nguyên như thiết lập của bạn để tiết kiệm VRAM
-        report_to="none",
+        predict_with_generate=False,
+        report_to="tensorboard",        # Report training logs to tensorboard
         seed=42
     )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
     early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=5, early_stopping_threshold=0.0)
+    
+    print("Setting up Training hyperparams completed")
 
     # 5. Trainer
     trainer = Seq2SeqTrainer(
@@ -156,7 +166,8 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     trainer.save_model(OUTPUT_DIR)
     tokenizer.save_pretrained(OUTPUT_DIR)
-    print(f"Đã huấn luyện xong! Mô hình lưu tại: {OUTPUT_DIR}")
+
+    print(f"Training completed! Model saved at: {OUTPUT_DIR}")
 
 if __name__ == "__main__":
     main()
