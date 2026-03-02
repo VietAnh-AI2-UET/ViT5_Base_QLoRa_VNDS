@@ -120,7 +120,7 @@ def main():
 
     # 4. Training Arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./vit5-base-qlora-checkpoints",
+        output_dir="./qdora_vit5_checkpoints",      # This is where "report_to="tensorboard"" folder is stored
         num_train_epochs=EPOCHS,
         learning_rate=LR,
         lr_scheduler_type="cosine",

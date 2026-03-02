@@ -119,7 +119,7 @@ def main():
 
     # 4. Training Arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./vit5-base-qlora-checkpoints",
+        output_dir="./qlora_vit5_baseline_checkpoints",
         num_train_epochs=EPOCHS,
         learning_rate=LR,
         lr_scheduler_type="cosine",

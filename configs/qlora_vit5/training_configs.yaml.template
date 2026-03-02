@@ -24,4 +24,4 @@ training:
   weight_decay: ${WEIGHT_DECAY:-0.01}
   warmup_ratio: ${WARMUP_RATIO:-0.05}
   label_smoothing_factor: ${LABEL_SMOOTHING_FACTOR:-0.1}
-  output_dir: "${OUTPUT_DIR:-./qlora_vit5_baseline}"
+  output_dir: "${OUTPUT_DIR}"

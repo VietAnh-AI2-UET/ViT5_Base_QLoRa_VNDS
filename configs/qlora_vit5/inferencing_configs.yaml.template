@@ -1,7 +1,7 @@
 model:
   model_name: "${MODEL_NAME:-VietAI/vit5-base}"
   dataset_name: "${DATASET_NAME:-nam194/vietnews}"
-  adapter_path: "${ADAPTER_PATH:-./qlora_vit5_baseline}"
+  adapter_path: "${ADAPTER_PATH}"
 
 generation:
   output_max_length: ${OUTPUT_MAX_LENGTH:-256}
