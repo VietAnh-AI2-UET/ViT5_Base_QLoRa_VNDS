@@ -22,7 +22,14 @@ def parse_args():
         "--config", 
         type=str,
         required=True, # Bắt buộc phải truyền file config khi chạy
-        help="YAML configs directory"
+        help="Enter YAML configs path"
+    )
+
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        required=True,
+        help="Where do you want to save the model's adapter?"
     )
     
     return parser.parse_args()
@@ -60,7 +67,7 @@ def main():
     GRAD_ACCUM_STEPS = config['training']['gradient_accumulation_steps']
 
     # Output directory
-    OUTPUT_DIR = config['training']['output_dir']
+    OUTPUT_DIR = args.output_dir
 
     print(f"Step 0: Loading configuration for {MODEL_NAME} fine-tuning completed")
 

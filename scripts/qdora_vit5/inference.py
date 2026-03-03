@@ -21,6 +21,13 @@ def parse_args():
         help="YAML configs directory"
     )
 
+    parser.add_argument(
+        "--adapter_path",
+        type=str,
+        required=True,
+        help="Where did you saved the model's adapter?"
+    )
+
     return parser.parse_args()
 
 
@@ -34,7 +41,7 @@ def main():
     # Define model, dataset and adapter
     MODEL_NAME = config["model"]["model_name"]
     DATASET_NAME = config["model"]["dataset_name"]
-    ADAPTER_PATH = config["model"]["adapter_path"]
+    ADAPTER_PATH = args.adapter_path
 
     # Define generation hyperparams
     OUTPUT_MAX_LENGTH = config["generation"]["output_max_length"]
