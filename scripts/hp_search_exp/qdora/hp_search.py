@@ -23,15 +23,15 @@ def parse_args():
         "--config", 
         type=str,
         required=True,
-        help="Enter YAML configs path"
+        help="Enter YAML configs path for hp search"
     )
 
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        required=True,
-        help="Where do you want to save the model's adapter?"
-    )
+    # parser.add_argument(
+    #     "--output_dir",
+    #     type=str,
+    #     required=True,
+    #     help="Where do you want to save the model's adapter?"
+    # )
     
     # The number of trials for Optuna hp search
     parser.add_argument(
@@ -46,7 +46,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    print("Start running train.py with Optuna Integration")
+    print("Start running hp_search.py with Optuna Integration")
 
     # 0. Read YAML Configs
     with open(args.config, 'r', encoding='utf-8') as file:
@@ -75,7 +75,7 @@ def main():
     BATCH_SIZE = config['training']['batch_size']
     GRAD_ACCUM_STEPS = config['training']['gradient_accumulation_steps']
 
-    OUTPUT_DIR = args.output_dir
+    # OUTPUT_DIR = args.output_dir
 
     print(f"Step 0: Loading configuration for {MODEL_NAME} completed")
 
@@ -137,8 +137,10 @@ def main():
 
     # 4. THIẾT LẬP OPTUNA
     def optuna_hp_space(trial):
-        """--Hyperparameters search space--
-            Define which parameter you want to perform search with Optuna"""
+        """
+        --Hyperparameters search space--
+        Define which parameter you want to perform search with Optuna
+        """
         return {
             "learning_rate": trial.suggest_float("learning_rate", 1e-5, 5e-4, log=True),
         }
@@ -151,7 +153,7 @@ def main():
 
     # 5. Training Arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./qdora_vit5_search_checkpoints",
+        output_dir="./qdora_vit5_hpsearch_checkpoints",
         num_train_epochs=EPOCHS,
         # learning_rate will be overwritten by Optuna
         # learning_rate=LR
