@@ -178,7 +178,12 @@ def main():
         seed=42
     )
 
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model_init=model_init)
+    dummy_model_for_datacollator = model_init()
+
+    data_collator = DataCollatorForSeq2Seq(
+        tokenizer, 
+        model=dummy_model_for_datacollator
+    )
     early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0.0)
     
     print("Step 4: Setting up Training hyperparams completed")
