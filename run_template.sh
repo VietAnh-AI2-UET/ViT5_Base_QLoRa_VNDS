@@ -12,7 +12,7 @@ SCRIPT="scripts/baseline/qdora_vit5/train.py"
 OUTPUT_DIR="model_adapter"
 # --------------------------------
 
-export LEARNING_RATE=0.0003143144372398535
+# export LEARNING_RATE=0.0003143144372398535
 
 # install gettext for bash
 echo "installing gettext library for bash"

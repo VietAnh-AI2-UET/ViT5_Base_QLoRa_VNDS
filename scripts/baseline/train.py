@@ -19,17 +19,33 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune ViT5 using QDoRa for Text Summarization")
     
     parser.add_argument(
-        "--config", 
+        "--configs", 
         type=str,
         required=True, # Bắt buộc phải truyền file config khi chạy
-        help="Enter YAML configs path"
+        help="Enter YAML training configs file path"
     )
 
     parser.add_argument(
-        "--output_dir",
-        type=str,
+        "--use_dora",
+        type=bool,
         required=True,
+        help="Which methode do you want to use? DORA --> True / LORA --> False"
+    )
+
+    parser.add_argument(
+        "--adapter_dir",
+        type=str,
+        required=False,
+        default="model_adapter",
         help="Where do you want to save the model's adapter?"
+    )
+
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        required=False,
+        default="model_checkpoint",
+        help="Where do you want to save the model's checkpoint?"
     )
     
     return parser.parse_args()
@@ -37,49 +53,53 @@ def parse_args():
 def main():
     args = parse_args()
 
-    print("Start running train.py")
+    print("===== RUNNING TRAIN.PY =====")
 
     # 0. Read YAML Configs
-    with open(args.config, 'r', encoding='utf-8') as file:
-        config = yaml.safe_load(file)
+    with open(args.configs, 'r', encoding='utf-8') as file:
+        configs = yaml.safe_load(file)
 
+    # --- TRAINING PARAMETERS ---
     # Model & Data    
-    MODEL_NAME = config["model"]["model_name"]
-    DATASET_NAME = config["model"]["dataset_name"]
+    MODEL_NAME = configs["model"]["model_name"]
+    DATASET_NAME = configs["model"]["dataset_name"]
 
     # Data sampling
-    TRAIN_SAMPLES = config["data"]["train_samples"]
-    VAL_SAMPLES = config["data"]["val_samples"]
+    TRAIN_SAMPLES = configs["data"]["train_samples"]
+    VAL_SAMPLES = configs["data"]["val_samples"]
 
     # LoRa configs
-    LORA_R = config["lora"]["lora_r"]
-    LORA_ALPHA = config["lora"]["lora_alpha"]
-    LORA_TARGET_MODULE = config["lora"]["lora_target_module"]
-    LORA_DROPOUT = config["lora"]["lora_dropout"]
+    LORA_R = configs["lora"]["lora_r"]
+    LORA_ALPHA = configs["lora"]["lora_alpha"]
+    LORA_TARGET_MODULE = configs["lora"]["lora_target_module"]
+    LORA_DROPOUT = configs["lora"]["lora_dropout"]
+    USE_DORA = args.use_dora
 
     # Training Hyperparams
-    EPOCHS = config["training"]["epochs"]
-    LR = config["training"]["learning_rate"]
-    WEIGHT_DECAY = config["training"]["weight_decay"]
-    WARMUP_RATIO = config["training"]["warmup_ratio"]
-    LABEL_SMOOTHING_FACTOR = config["training"]["label_smoothing_factor"]
-    BATCH_SIZE = config['training']['batch_size']
-    GRAD_ACCUM_STEPS = config['training']['gradient_accumulation_steps']
+    EPOCHS = configs["training"]["epochs"]
+    LR = configs["training"]["learning_rate"]
+    WEIGHT_DECAY = configs["training"]["weight_decay"]
+    WARMUP_RATIO = configs["training"]["warmup_ratio"]
+    LABEL_SMOOTHING_FACTOR = configs["training"]["label_smoothing_factor"]
+    BATCH_SIZE = configs['training']['batch_size']
+    GRAD_ACCUM_STEPS = configs['training']['gradient_accumulation_steps']
 
     # Output directory
-    OUTPUT_DIR = args.output_dir
+    ADAPTER_DIR = args.adapter_dir
+    CHECKPOINT_DIR = args.checkpoint_dir
 
     print(f"Step 0: Loading configuration for {MODEL_NAME} fine-tuning completed")
+    # --------------------------------------------------------------------------------
 
     # 1. Load Tokenizer & Dataset
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     dataset = load_dataset(DATASET_NAME)
 
     # Subsample dataset
-    dataset["train"] = dataset["train"].shuffle(seed=42).select(range(TRAIN_SAMPLES))
-    dataset["validation"] = dataset["validation"].shuffle(seed=42).select(range(VAL_SAMPLES))
+    dataset["train"] = dataset["train"].shuffle(seed=42).select(range(TRAIN_SAMPLES))                   # We only need about 6000 samples for fine-tuning
+    dataset["validation"] = dataset["validation"].shuffle(seed=42).select(range(VAL_SAMPLES))           # And only 1000 samples for validation
 
-    print("Step 1: Loading tokenizer and dataset completed")
+    print("STEP 1: LOADING TOKENIZER AND DATASET COMPLETED")
     
     # 2. Preprocess Data
     def preprocess_function(batch):
@@ -94,9 +114,9 @@ def main():
 
     tokenized_dataset = dataset.map(preprocess_function, batched=True)
     
-    print("Step 2: Preprocessing dataset completed")
+    print("STEP 2: PREPROCESSING DATA COMPLETED")
 
-    # 3. Setup QLoRa Model
+    # 3. Setup QLORA/QDORA Model
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type='nf4',
@@ -118,16 +138,16 @@ def main():
         lora_dropout=LORA_DROPOUT,
         bias='none',
         task_type='SEQ_2_SEQ_LM',
-        use_dora=True
+        use_dora=USE_DORA
     )
     model = get_peft_model(base_model, lora_config)
-    model.print_trainable_parameters()      # <--- QDORA VIT5-BASE (baseline model)
+    model.print_trainable_parameters()      # <--- QLORA/QDORA VIT5-BASE (baseline model)
 
-    print(F"Step 3: Setting up QDoRa {MODEL_NAME} completed")
+    print(F"STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED")
 
     # 4. Training Arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./qdora_vit5_checkpoints",      # This is where "report_to="tensorboard"" folder is stored
+        output_dir=CHECKPOINT_DIR,      # This is where "report_to="tensorboard"" folder is stored
         num_train_epochs=EPOCHS,
         learning_rate=LR,
         lr_scheduler_type="cosine",
@@ -154,7 +174,7 @@ def main():
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
     early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=5, early_stopping_threshold=0.0)
     
-    print("Setting up Training hyperparams completed")
+    print("STEP 4: SETTING UP HYPERPARAMS COMPLETED")
 
     # 5. Trainer
     trainer = Seq2SeqTrainer(
@@ -168,14 +188,15 @@ def main():
     )
 
     # Start Training
+    print(f"===== START TRAINING {MODEL_NAME} =====")
     trainer.train()
 
-    # 6. Save Model
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    trainer.save_model(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
+    # 6. Save Model adapter
+    os.makedirs(ADAPTER_DIR, exist_ok=True)
+    trainer.save_model(ADAPTER_DIR)
+    tokenizer.save_pretrained(ADAPTER_DIR)
 
-    print(f"Training completed! Model saved at: {OUTPUT_DIR}")
+    print(f"Training completed! Model saved at: {ADAPTER_DIR}")
 
 if __name__ == "__main__":
     main()
