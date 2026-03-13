@@ -34,6 +34,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start training
 echo "Start running $TRAIN_SCRIPT"
 
-python $TRAIN_SCRIPT --config $CONFIG_PATH --use_dora $USE_DORA --adapter_dir $OUTPUT_DIR --checkpoint_dir $CHECKPOINT_DIR
+python $TRAIN_SCRIPT --config $CONFIG_PATH --use_dora $USE_DORA --adapter_dir $ADAPTER_DIR --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="
