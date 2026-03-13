@@ -1,4 +1,5 @@
 import os
+import shutil
 import yaml
 import argparse
 import torch
@@ -197,6 +198,18 @@ def main():
     tokenizer.save_pretrained(ADAPTER_DIR)
 
     print(f"Training completed! Model saved at: {ADAPTER_DIR}")
+
+    # Create archive file for model's adapter
+    shutil.make_archive(ADAPTER_DIR, "zip", ADAPTER_DIR)
+
+    print(f"Thư mục '{ADAPTER_DIR}' đã được nén thành công thành '{ADAPTER_DIR}.zip'")
+    print(f"Bạn có thể tải tệp '{ADAPTER_DIR}.zip' từ phần duyệt tệp của Colab (biểu tượng thư mục ở bên trái).")
+
+    # Create archive file for model's checkpoints
+    shutil.make_archive(CHECKPOINT_DIR, "zip", CHECKPOINT_DIR)
+
+    print(f"Thư mục '{CHECKPOINT_DIR}' đã được nén thành công thành '{CHECKPOINT_DIR}.zip'")
+    print(f"Bạn có thể tải tệp '{CHECKPOINT_DIR}.zip' từ phần duyệt tệp của Colab (biểu tượng thư mục ở bên trái).")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 import os
+import shutil
 import yaml
 import argparse
 import torch
@@ -225,6 +226,12 @@ def main():
     print(f"Best hp found: {best_trial.hyperparameters}")
     print(f"Best eval_loss: {best_trial.objective}")
     print("="*50)
+
+    # Create archive file for model's checkpoints
+    shutil.make_archive(CHECKPOINT_DIR, "zip", CHECKPOINT_DIR)
+
+    print(f"Thư mục '{CHECKPOINT_DIR}' đã được nén thành công thành '{CHECKPOINT_DIR}.zip'")
+    print(f"Bạn có thể tải tệp '{CHECKPOINT_DIR}.zip' từ phần duyệt tệp của Colab (biểu tượng thư mục ở bên trái).")
 
 if __name__ == "__main__":
     main()
