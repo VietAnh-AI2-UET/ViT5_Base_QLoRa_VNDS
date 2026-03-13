@@ -17,7 +17,7 @@ from transformers import (
 from peft import get_peft_model, prepare_model_for_kbit_training, LoraConfig
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Hyperparameter Search for QDoRa ViT5 using Optuna")
+    parser = argparse.ArgumentParser(description="Hyperparameter Search for QLORA / QDORA ViT5 using Optuna")
     
     parser.add_argument(
         "--config", 
@@ -25,13 +25,6 @@ def parse_args():
         required=True,
         help="Enter YAML configs path for hp search"
     )
-
-    # parser.add_argument(
-    #     "--output_dir",
-    #     type=str,
-    #     required=True,
-    #     help="Where do you want to save the model's adapter?"
-    # )
     
     # The number of trials for Optuna hp search
     parser.add_argument(
@@ -39,6 +32,22 @@ def parse_args():
         type=int,
         default=5,
         help="Number of trials for Optuna hyperparameter search"
+    )
+
+    parser.add_argument(
+        "--use_dora",
+        type=bool,
+        required=True,
+        help="Which methode do you want to use? DORA --> True / LORA --> False"
+    )
+
+    # Training checkpoints saving directory
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        required=False,
+        default="model_checkpoint",
+        help="Where do you want to save the model's checkpoint?",
     )
     
     return parser.parse_args()
@@ -65,6 +74,7 @@ def main():
     LORA_ALPHA = config["lora"]["lora_alpha"]
     LORA_TARGET_MODULE = config["lora"]["lora_target_module"]
     LORA_DROPOUT = config["lora"]["lora_dropout"]
+    USE_DORA = args.use_dora
 
     # Training Hyperparams
     EPOCHS = config["training"]["epochs"]
@@ -74,8 +84,10 @@ def main():
     LABEL_SMOOTHING_FACTOR = config["training"]["label_smoothing_factor"]
     BATCH_SIZE = config['training']['batch_size']
     GRAD_ACCUM_STEPS = config['training']['gradient_accumulation_steps']
+    N_TRIALS = args.n_trials
 
-    # OUTPUT_DIR = args.output_dir
+    # Output saving directory
+    CHECKPOINT_DIR = args.checkpoint_dir
 
     print(f"Step 0: Loading configuration for {MODEL_NAME} completed")
 
@@ -128,7 +140,7 @@ def main():
             lora_dropout=LORA_DROPOUT,
             bias='none',
             task_type='SEQ_2_SEQ_LM',
-            use_dora=True
+            use_dora=USE_DORA
         )
         
         return get_peft_model(base_model, lora_config)
@@ -153,10 +165,9 @@ def main():
 
     # 5. Training Arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./qdora_vit5_hpsearch_checkpoints",
+        output_dir=CHECKPOINT_DIR,
         num_train_epochs=EPOCHS,
-        # learning_rate will be overwritten by Optuna
-        # learning_rate=LR
+        # learning_rate=LR                                  # learning_rate will be overwritten by Optuna
         lr_scheduler_type="cosine",
         weight_decay=WEIGHT_DECAY,
         warmup_ratio=WARMUP_RATIO,
@@ -166,10 +177,10 @@ def main():
         per_device_eval_batch_size=BATCH_SIZE * 2,
         optim="adamw_torch",
         fp16=True,
-        logging_steps=50,
+        logging_steps=25,
         eval_strategy="epoch",
         save_strategy="epoch",
-        save_total_limit=1,                     # This script is just for searching hp phase, so actually no need for any saving 
+        save_total_limit=1,                                 # This script is just for searching hp phase, so actually no need for any saving 
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
@@ -200,13 +211,13 @@ def main():
     )
 
     # 7. RUN OPTUNA HYPERPARAMETER SEARCH
-    print(f"Step 5: Start hyperparameters search with {args.n_trials} trials...")
+    print(f"Step 5: Start hyperparameters search with {N_TRIALS} trials...")
     best_trial = trainer.hyperparameter_search(
         direction="minimize", # Depend on your compute objective (in this case validation loss, so it should be minimize)
         backend="optuna",
         hp_space=optuna_hp_space,
         compute_objective=compute_objective,
-        n_trials=args.n_trials
+        n_trials=N_TRIALS
     )
 
     print("="*50)

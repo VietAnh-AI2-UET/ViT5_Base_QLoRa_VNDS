@@ -3,14 +3,14 @@
 # Dừng script ngay lập tức nếu có bất kỳ lỗi nào xảy ra
 set -e 
 
-echo "=== SETTING UP TRAINING EXPERIMENT ==="
+echo "=== SETTING UP HYPERPARAMS SEARCHING EXPERIMENT ==="
 
 # --- IMPORTANT PATHS ---
 TEMPLATE_PATH="enter configs template file path"
 CONFIG_PATH="where do you want to save the yaml file?"
 TRAIN_SCRIPT="enter training script path"
+N_TRIALS=5
 USE_DORA="Which methode do you want to use? DORA --> True / LORA --> False"                       
-ADAPTER_DIR="where do you want to save the model's adapter?"
 CHECKPOINT_DIR="where do you want to save the model's checkpoint?"
 # --------------------------------
 
@@ -34,6 +34,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start training
 echo "Start running $TRAIN_SCRIPT"
 
-python $TRAIN_SCRIPT --config $CONFIG_PATH --use_dora $USE_DORA --adapter_dir $OUTPUT_DIR --checkpoint_dir $CHECKPOINT_DIR
+python $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --use_dora $USE_DORA --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="
