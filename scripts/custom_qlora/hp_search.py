@@ -113,8 +113,12 @@ def main():
     print("STEP 2: PREPROCESSING DATA COMPLETED")
 
     # 3. Setup QLORA/QDORA Model
-    def model_init(upper_layer_rank=4, middle_layer_rank=8, bottom_layer_rank=16):
+    def model_init():
         """Return a brand new model for each trial"""
+        # Use fixed ranks since not searching them
+        upper_layer_rank = 4
+        middle_layer_rank = 8
+        bottom_layer_rank = 16
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type='nf4',
@@ -221,13 +225,7 @@ def main():
         seed=42
     )
 
-    model_init_kwargs = {
-        "upper_layer_rank": 4,
-        "middle_layer_rank": 8,
-        "bottom_layer_rank": 16
-    }
-
-    dummy_model_for_data_collator = model_init(**model_init_kwargs)
+    dummy_model_for_data_collator = model_init()
     data_collator = DataCollatorForSeq2Seq(
         tokenizer, 
         model=dummy_model_for_data_collator)
@@ -238,7 +236,7 @@ def main():
 
     # 5. Trainer
     trainer = Seq2SeqTrainer(
-        model_init=model_init(**model_init_kwargs),
+        model_init=model_init,
         args=training_args,
         train_dataset=tokenized_dataset['train'],
         eval_dataset=tokenized_dataset['validation'],
