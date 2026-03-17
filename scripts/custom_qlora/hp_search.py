@@ -113,7 +113,7 @@ def main():
     print("STEP 2: PREPROCESSING DATA COMPLETED")
 
     # 3. Setup QLORA/QDORA Model
-    def model_init():
+    def model_init(upper_layer_rank=4, middle_layer_rank=8, bottom_layer_rank=16):
         """Return a brand new model for each trial"""
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -135,17 +135,20 @@ def main():
         num_layers = 12
         for i in range(num_layers):
             if i < 4:
-                r, alpha = 4, 8
+                r, alpha = upper_layer_rank, upper_layer_rank * 2
             elif i < 8:
-                r, alpha = 8, 16
+                r, alpha = middle_layer_rank, middle_layer_rank * 2
             else:
-                r, alpha = 16, 32
+                r, alpha = bottom_layer_rank, bottom_layer_rank * 2
 
-            rank_pattern[f"encoder.block.{i}"] = r
-            rank_pattern[f"decoder.block.{i}"] = r
+            encoder_regex = f".*encoder\\.block\\.{i}\\..*"
+            decoder_regex = f".*decoder\\.block\\.{i}\\..*"
 
-            alpha_pattern[f"encoder.block.{i}"] = alpha
-            alpha_pattern[f"decoder.block.{i}"] = alpha
+            rank_pattern[encoder_regex] = r
+            rank_pattern[decoder_regex] = r
+            
+            alpha_pattern[encoder_regex] = alpha
+            alpha_pattern[decoder_regex] = alpha
 
         lora_config_kwargs = {
             "r": LORA_R,
@@ -163,6 +166,16 @@ def main():
         lora_config = LoraConfig(**lora_config_kwargs)
         
         model = get_peft_model(base_model, lora_config)
+
+        # --- LAYER RANK CHECK ---
+        print("\n--- CHECKING LORA RANK DISTRIBUTION (LORA LAYERS) ---")
+        for name, module in model.named_modules():
+            # Tìm các module của LoRA (thường có thuộc tính 'r' lưu trữ rank)
+            if hasattr(module, 'r'):
+                # Trong thư viện peft, module.r thường là một dictionary chứa rank của adapter 'default'
+                rank = module.r.get('default', module.r) if isinstance(module.r, dict) else module.r
+                print(f"Layer: {name:<70} | Rank: {rank}")
+        print("--------------------------------------------------\n")
         return model
 
     print(f"STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED")
@@ -208,7 +221,13 @@ def main():
         seed=42
     )
 
-    dummy_model_for_data_collator = model_init()
+    model_init_kwargs = {
+        "upper_layer_rank": 4,
+        "middle_layer_rank": 8,
+        "bottom_layer_rank": 16
+    }
+
+    dummy_model_for_data_collator = model_init(**model_init_kwargs)
     data_collator = DataCollatorForSeq2Seq(
         tokenizer, 
         model=dummy_model_for_data_collator)
@@ -219,7 +238,7 @@ def main():
 
     # 5. Trainer
     trainer = Seq2SeqTrainer(
-        model=model_init,
+        model_init=model_init(**model_init_kwargs),
         args=training_args,
         train_dataset=tokenized_dataset['train'],
         eval_dataset=tokenized_dataset['validation'],
