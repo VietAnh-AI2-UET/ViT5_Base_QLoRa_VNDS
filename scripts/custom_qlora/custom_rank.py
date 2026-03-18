@@ -112,6 +112,9 @@ def main():
     print("STEP 2: PREPROCESSING DATA COMPLETED")
 
     # 3. Setup QLORA/QDORA Model
+    upper_layer_rank = 4
+    middle_layer_rank = 8
+    bottom_layer_rank = 16
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type='nf4',
@@ -132,17 +135,20 @@ def main():
     num_layers = 12
     for i in range(num_layers):
         if i < 4:
-            r, alpha = 4, 8
+            r, alpha = upper_layer_rank, upper_layer_rank * 2
         elif i < 8:
-            r, alpha = 8, 16
+            r, alpha = middle_layer_rank, middle_layer_rank * 2
         else:
-            r, alpha = 16, 32
+            r, alpha = bottom_layer_rank, bottom_layer_rank * 2
 
-        rank_pattern[f"encoder.block.{i}"] = r
-        rank_pattern[f"decoder.block.{i}"] = r
+        encoder_regex = f".*encoder\\.block\\.{i}\\..*"
+        decoder_regex = f".*decoder\\.block\\.{i}\\..*"
 
-        alpha_pattern[f"encoder.block.{i}"] = alpha
-        alpha_pattern[f"decoder.block.{i}"] = alpha
+        rank_pattern[encoder_regex] = r
+        rank_pattern[decoder_regex] = r
+        
+        alpha_pattern[encoder_regex] = alpha
+        alpha_pattern[decoder_regex] = alpha
 
     lora_config_kwargs = {
         "r": LORA_R,
