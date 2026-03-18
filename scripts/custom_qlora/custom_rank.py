@@ -166,6 +166,17 @@ def main():
     lora_config = LoraConfig(**lora_config_kwargs)
     
     model = get_peft_model(base_model, lora_config)
+
+    # --- LAYER RANK CHECK ---
+    print("\n--- CHECKING LORA RANK DISTRIBUTION (LORA LAYERS) ---")
+    for name, module in model.named_modules():
+        # Tìm các module của LoRA (thường có thuộc tính 'r' lưu trữ rank)
+        if hasattr(module, 'r'):
+            # Trong thư viện peft, module.r thường là một dictionary chứa rank của adapter 'default'
+            rank = module.r.get('default', module.r) if isinstance(module.r, dict) else module.r
+            print(f"Layer: {name:<70} | Rank: {rank}")
+    print("--------------------------------------------------\n")
+    
     model.print_trainable_parameters()
 
     print(f"STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED")
