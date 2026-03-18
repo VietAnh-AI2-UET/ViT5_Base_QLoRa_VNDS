@@ -112,9 +112,9 @@ def main():
     print("STEP 2: PREPROCESSING DATA COMPLETED")
 
     # 3. Setup QLORA/QDORA Model
-    upper_layer_rank = 4
+    upper_layer_rank = 16
     middle_layer_rank = 8
-    bottom_layer_rank = 16
+    bottom_layer_rank = 4
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type='nf4',
@@ -176,7 +176,7 @@ def main():
             rank = module.r.get('default', module.r) if isinstance(module.r, dict) else module.r
             print(f"Layer: {name:<70} | Rank: {rank}")
     print("--------------------------------------------------\n")
-    
+
     model.print_trainable_parameters()
 
     print(f"STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED")
