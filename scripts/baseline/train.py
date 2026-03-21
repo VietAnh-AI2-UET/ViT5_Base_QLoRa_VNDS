@@ -169,6 +169,7 @@ def main():
         greater_is_better=False,
         predict_with_generate=False,
         report_to="tensorboard",        # Report training logs to tensorboard
+        disable_tqdm=True,
         seed=42
     )
 
