@@ -10,7 +10,7 @@ TEMPLATE_PATH="enter configs template file path"
 CONFIG_PATH="where do you want to save the yaml file?"
 TRAIN_SCRIPT="enter training script path"
 N_TRIALS=5
-USE_DORA="Which methode do you want to use? DORA --> True / LORA --> False"                       
+USE_DORA="Which methode do you want to use? DORA --> True / LORA --> False / AdaLORA --> Delete this variable"                       
 CHECKPOINT_DIR="where do you want to save the model's checkpoint?"
 # --------------------------------
 
@@ -34,6 +34,7 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start training
 echo "Start running $TRAIN_SCRIPT"
 
+# Delete the --use_dora parameter if you want to use AdaLORA
 python $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --use_dora $USE_DORA --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="
