@@ -12,8 +12,8 @@ data:
 lora:
   init_r: ${INIT_R:-12}
   target_r: ${TARGET_R:-8}
-  tinit: ${TINIT:-200}
-  tfinal: ${TFINAL:-1000}
+  tinit: ${TINIT:-750}
+  tfinal: ${TFINAL:-3000}
   delta_t: ${DELTA_T:-10}
   lora_alpha: ${LORA_ALPHA:-32}
   lora_dropout: ${LORA_DROPOUT:-0.1}
@@ -21,7 +21,7 @@ lora:
 
 # Cấu hình quá trình huấn luyện (Training Hyperparameters)
 training:
-  epochs: ${EPOCHS:-10}
+  epochs: ${EPOCHS:-20}
   batch_size: ${BATCH_SIZE:-4}
   gradient_accumulation_steps: ${GRADIENT_ACCUMULATION_STEPS:-4}
   learning_rate: ${LEARNING_RATE:-0.0002}

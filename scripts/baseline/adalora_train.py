@@ -81,6 +81,11 @@ def main():
     BATCH_SIZE = configs['training']['batch_size']
     GRAD_ACCUM_STEPS = configs['training']['gradient_accumulation_steps']
 
+    STEPS_PER_EPOCH = (TRAIN_SAMPLES // BATCH_SIZE) // GRAD_ACCUM_STEPS
+    if (TRAIN_SAMPLES // BATCH_SIZE) % GRAD_ACCUM_STEPS != 0:
+         STEPS_PER_EPOCH += 1
+    TOTAL_STEP = STEPS_PER_EPOCH * EPOCHS
+
     # Output directory
     ADAPTER_DIR = args.adapter_dir
     CHECKPOINT_DIR = args.checkpoint_dir
@@ -135,6 +140,7 @@ def main():
         tinit=TINIT,
         tfinal=TFINAL,
         deltaT=DELTA_T,
+        total_step=TOTAL_STEP,
         lora_alpha=LORA_ALPHA,
         target_modules=LORA_TARGET_MODULE,
         lora_dropout=LORA_DROPOUT,
