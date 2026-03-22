@@ -12,9 +12,9 @@ data:
 lora:
   init_r: ${INIT_R:-12}
   target_r: ${TARGET_R:-8}
-  tinit: ${TINIT:-200}
-  tfinal: ${TFINAL:-1000}
-  delta_t: ${DELTA_T:-10}
+  tinit: ${TINIT:-15}
+  tfinal: ${TFINAL:-30}
+  delta_t: ${DELTA_T:-5}
   lora_alpha: ${LORA_ALPHA:-32}
   lora_dropout: ${LORA_DROPOUT:-0.1}
   lora_target_module: ${LORA_TARGET_MODULE:-['q', 'v']}
