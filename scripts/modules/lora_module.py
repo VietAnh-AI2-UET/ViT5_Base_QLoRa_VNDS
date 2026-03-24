@@ -1,20 +1,17 @@
 from peft import (
     get_peft_model, 
-    LoraConfig
-    )
+    LoraConfig,
+    AdaLoraConfig
+)
 
-def lora_configuration(base_model, lora_r, lora_alpha, lora_target_module, lora_dropout, use_dora):
-    lora_configs_kwargs = {
-        "r": lora_r,
-        "lora_alpha": lora_alpha,
-        "lora_dropout": lora_target_module,
-        "target_modules": lora_dropout,
-        "bias": "none",
-        "task_type": "SEQ_2_SEQ_LM",
-        "use_dora": use_dora
-    }
-    
+def lora_configuration(base_model, lora_configs_kwargs):
     lora_configs = LoraConfig(**lora_configs_kwargs)
     model = get_peft_model(base_model, lora_configs)
+
+    return model
+
+def adalora_configuration(base_model, adalora_configs_kwargs):
+    adalora_configs = AdaLoraConfig(**adalora_configs_kwargs)
+    model = get_peft_model(base_model, adalora_configs)
 
     return model

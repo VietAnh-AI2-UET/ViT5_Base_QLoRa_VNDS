@@ -1,5 +1,9 @@
 import shutil
 import yaml
+from scripts.modules.arguments import parse_args
+from scripts.modules.quantization_module import model_quantization
+from scripts.modules.lora_module import lora_configuration
+from scripts.utils.save_model_utils import save_model
 from transformers import (
     AutoTokenizer, 
     Seq2SeqTrainingArguments, 
@@ -7,12 +11,12 @@ from transformers import (
     DataCollatorForSeq2Seq,
     EarlyStoppingCallback
 )
-from scripts.modules.arguments import parse_args
-from scripts.modules.data_module import prepare_dataset
-from scripts.modules.quantization_module import model_quantization
-from scripts.modules.lora_module import lora_configuration
-from scripts.utils.save_model_module import save_model
-
+from scripts.utils.training_utils import (
+    get_tokenized_dataset,
+    get_lora_configs_kwargs,
+    get_training_args_kwargs
+)
+    
 def main():
     terminal_width = shutil.get_terminal_size().columns
     print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
@@ -26,27 +30,9 @@ def main():
     # ------------------------------------------------------------ TRAINING CONFIGS ------------------------------------------------------------
     # Model & Data    
     MODEL_NAME = configs["model"]["model_name"]
-    DATASET_NAME = configs["model"]["dataset_name"]
-
-    # Data sampling
-    TRAIN_SAMPLES = configs["data"]["train_samples"]
-    VAL_SAMPLES = configs["data"]["val_samples"]
 
     # LoRa configs
-    LORA_R = configs["lora"]["lora_r"]
-    LORA_ALPHA = configs["lora"]["lora_alpha"]
-    LORA_TARGET_MODULE = configs["lora"]["lora_target_module"]
-    LORA_DROPOUT = configs["lora"]["lora_dropout"]
     USE_DORA = args.use_dora
-
-    # Training Hyperparams
-    EPOCHS = configs["training"]["epochs"]
-    LR = configs["training"]["learning_rate"]
-    WEIGHT_DECAY = configs["training"]["weight_decay"]
-    WARMUP_RATIO = configs["training"]["warmup_ratio"]
-    LABEL_SMOOTHING_FACTOR = configs["training"]["label_smoothing_factor"]
-    BATCH_SIZE = configs['training']['batch_size']
-    GRAD_ACCUM_STEPS = configs['training']['gradient_accumulation_steps']
 
     # Output directory
     ADAPTER_DIR = args.adapter_dir
@@ -56,26 +42,15 @@ def main():
 
     # ------------------------------------------------------------ PREPROCESSING DATA ------------------------------------------------------------
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    
-    tokenized_dataset = prepare_dataset(
-        dataset_name=DATASET_NAME,
-        tokenizer=tokenizer,
-        train_samples=TRAIN_SAMPLES,
-        val_samples=VAL_SAMPLES)
+    tokenized_dataset = get_tokenized_dataset(configs=configs, tokenizer=tokenizer)
     
     print("STEP 2: PREPROCESSING DATA COMPLETED")
 
-    # ------------------------------------------------------------ SETUP MODEL FOR TRAINING ------------------------------------------------------------
+    # ------------------------------------------------------------ SETUP QUANTIZATION LORA MODEL FOR TRAINING ------------------------------------------------------------
     base_model = model_quantization(model_name=MODEL_NAME)
 
-    model = lora_configuration(
-        base_model=base_model,
-        lora_r=LORA_R,
-        lora_alpha=LORA_ALPHA,
-        lora_target_module=LORA_TARGET_MODULE,
-        lora_dropout=LORA_DROPOUT,
-        use_dora=USE_DORA
-    )
+    lora_configs_kwargs = get_lora_configs_kwargs(configs=configs, use_dora=USE_DORA)
+    model = lora_configuration(base_model, lora_configs_kwargs)
 
     model.print_trainable_parameters()
 
@@ -84,32 +59,7 @@ def main():
     # ------------------------------------------------------------ SETUP HYPERPARAMETERS & TRAINER ------------------------------------------------------------
 
     # 4. Training Arguments
-    training_args_kwargs = {
-        "output_dir": CHECKPOINT_DIR,
-        "num_train_epochs": EPOCHS,
-        "learning_rate": LR,
-        "lr_scheduler_type": "cosine",
-        "weight_decay": WEIGHT_DECAY,
-        "warmup_ratio": WARMUP_RATIO,
-        "label_smoothing_factor": LABEL_SMOOTHING_FACTOR,
-        "per_device_train_batch_size": BATCH_SIZE,
-        "gradient_accumulation_steps": GRAD_ACCUM_STEPS,
-        "per_device_eval_batch_size": BATCH_SIZE * 2,
-        "optim": "adamw_torch",
-        "fp16": True,
-        "logging_steps": 50,
-        "eval_strategy": "epoch",
-        "save_strategy": "epoch",
-        "save_total_limit": 2,
-        "load_best_model_at_end": True,
-        "metric_for_best_model": "eval_loss",
-        "greater_is_better": False,
-        "predict_with_generate": False,
-        "report_to": "tensorboard",
-        "disable_tqdm": True,
-        "seed": 42
-    }
-
+    training_args_kwargs = get_training_args_kwargs(configs=configs, checkpoint_dir=CHECKPOINT_DIR)
     training_args = Seq2SeqTrainingArguments(**training_args_kwargs)
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
