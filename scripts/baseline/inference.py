@@ -74,7 +74,7 @@ def main():
     )
 
     # 5. Combine base model and adapter
-    qdora_vit5 = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
+    fine_tuned_model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
 
     # 6. Create output generating function
     def generate_summary(tokenizer, model, text) -> str:
@@ -101,7 +101,7 @@ def main():
 
     generated_summaries = []
     for article in tqdm(test_articles, desc="Generating summaries"): # Use tqdm for progress bar
-        generated_summaries.append(generate_summary(tokenizer, qdora_vit5, article))
+        generated_summaries.append(generate_summary(tokenizer, fine_tuned_model, article))
 
     # 8. Calculate ROUGE and BERT_scores
     rouge = evaluate.load('rouge')
