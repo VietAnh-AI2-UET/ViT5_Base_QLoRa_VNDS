@@ -8,7 +8,7 @@ from scripts.utils.training_utils import (
     get_peft_configs_kwargs
 )
 
-def get_model(configs, method):
+def get_model_for_training(configs, method):
     """
     Load the pre-trained model by quantization technique
     and combine it with specified PEFT method 

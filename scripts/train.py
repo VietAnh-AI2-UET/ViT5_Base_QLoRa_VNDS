@@ -2,7 +2,7 @@ import shutil
 import yaml
 from scripts.modules.arguments import BaseArgs
 from scripts.modules.data_module import get_tokenized_dataset
-from scripts.modules.model_module import get_model
+from scripts.modules.model_module import get_model_for_training
 from scripts.utils.save_model_utils import save_model
 from transformers import (
     AutoTokenizer, 
@@ -54,8 +54,7 @@ def main():
     with open(args.configs, 'r', encoding='utf-8') as file:
         configs = yaml.safe_load(file)
 
-    # ------------------------------------------------------------ TRAINING CONFIGS ------------------------------------------------------------
-    # Model & Data    
+    # ------------------------------------------------------------ TRAINING CONSTANTS ------------------------------------------------------------   
     MODEL_NAME = configs["model"]["model_name"]
     METHOD = args.method
     ADAPTER_DIR = args.adapter_dir
@@ -78,7 +77,7 @@ def main():
     # ------------------------------------------------------------ SETUP QUANTIZATION LORA MODEL FOR TRAINING ------------------------------------------------------------
 
     # Initiate model for fine-tuning
-    model = get_model(
+    model = get_model_for_training(
         configs=configs,
         method=METHOD
     )
