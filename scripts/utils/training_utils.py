@@ -1,14 +1,4 @@
 import math
-from scripts.modules.data_module import prepare_dataset
-
-def get_tokenized_dataset(configs, tokenizer):
-    tokenized_dataset = prepare_dataset(
-        dataset_name=configs["model"]["dataset_name"],
-        tokenizer=tokenizer,
-        train_samples=configs["data"]["train_samples"],
-        val_samples=configs["data"]["val_samples"]
-    )
-    return tokenized_dataset
 
 def get_total_steps(configs):
     TRAIN_SAMPLES = configs["data"]["train_samples"]
@@ -21,7 +11,7 @@ def get_total_steps(configs):
     
     return total_steps
 
-def get_lora_configs_kwargs(configs, use_dora):
+def get_lora_configs_kwargs(configs):
     lora_configs_kwargs = {
         "r": configs["lora"]["lora_r"],
         "lora_alpha": configs["lora"]["lora_alpha"],
@@ -29,9 +19,23 @@ def get_lora_configs_kwargs(configs, use_dora):
         "target_modules": configs["lora"]["lora_dropout"],
         "bias": "none",
         "task_type": "SEQ_2_SEQ_LM",
-        "use_dora": use_dora
+        "use_dora": False
     }
+
     return lora_configs_kwargs
+
+def get_dora_configs_kwargs(configs):
+    dora_configs_kwargs = {
+        "r": configs["lora"]["lora_r"],
+        "lora_alpha": configs["lora"]["lora_alpha"],
+        "lora_dropout": configs["lora"]["lora_target_module"],
+        "target_modules": configs["lora"]["lora_dropout"],
+        "bias": "none",
+        "task_type": "SEQ_2_SEQ_LM",
+        "use_dora": True
+    }
+
+    return dora_configs_kwargs
 
 def get_adalora_configs_kwargs(configs, total_steps):
     adalora_configs_kwargs = {
@@ -49,6 +53,34 @@ def get_adalora_configs_kwargs(configs, total_steps):
     }
 
     return adalora_configs_kwargs
+
+def get_peft_configs_kwargs(configs, method):
+    if method == "LORA":
+        lora_configs_kwargs = get_lora_configs_kwargs(
+            configs=configs,
+            use_dora=False
+        )
+        peft_configs_kwargs = lora_configs_kwargs
+    
+    elif method == "DORA":
+        dora_configs_kwargs = get_lora_configs_kwargs(
+            configs=configs,
+            use_dora=True
+        )
+        peft_configs_kwargs = dora_configs_kwargs
+
+    elif method == "ADALORA":
+        total_steps = get_total_steps(
+            configs=configs
+        )
+
+        adalora_configs_kwargs = get_adalora_configs_kwargs(
+            configs=configs,
+            total_steps=total_steps
+        )
+        peft_configs_kwargs = adalora_configs_kwargs
+    
+    return peft_configs_kwargs
 
 def get_training_args_kwargs(configs, checkpoint_dir):
     """Build training arguments kwargs from configs."""

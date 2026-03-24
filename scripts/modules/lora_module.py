@@ -1,17 +1,14 @@
-from peft import (
-    get_peft_model, 
+from peft import ( 
     LoraConfig,
     AdaLoraConfig
 )
 
-def lora_configuration(base_model, lora_configs_kwargs):
-    lora_configs = LoraConfig(**lora_configs_kwargs)
-    model = get_peft_model(base_model, lora_configs)
+def get_peft_configs(peft_configs_kwargs, method):
+    if method == "LORA":
+        peft_configs = LoraConfig(**peft_configs_kwargs)
+    elif method == "DORA":
+        peft_configs = LoraConfig(**peft_configs_kwargs)
+    elif method == "ADALORA":
+        peft_configs = AdaLoraConfig(**peft_configs_kwargs)
 
-    return model
-
-def adalora_configuration(base_model, adalora_configs_kwargs):
-    adalora_configs = AdaLoraConfig(**adalora_configs_kwargs)
-    model = get_peft_model(base_model, adalora_configs)
-
-    return model
+    return peft_configs

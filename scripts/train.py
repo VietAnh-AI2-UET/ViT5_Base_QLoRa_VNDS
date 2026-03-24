@@ -1,8 +1,8 @@
 import shutil
 import yaml
-from scripts.modules.arguments import parse_args
-from scripts.modules.quantization_module import model_quantization
-from scripts.modules.lora_module import lora_configuration
+from scripts.modules.arguments import BaseArgs
+from scripts.modules.data_module import get_tokenized_dataset
+from scripts.modules.model_module import get_model
 from scripts.utils.save_model_utils import save_model
 from transformers import (
     AutoTokenizer, 
@@ -12,60 +12,105 @@ from transformers import (
     EarlyStoppingCallback
 )
 from scripts.utils.training_utils import (
-    get_tokenized_dataset,
-    get_lora_configs_kwargs,
     get_training_args_kwargs
 )
+
+class TrainArgs(BaseArgs):
+    """
+    Parser object inherited from BaseArgs class
+    Get arguments from command-line
+    """
+    def __init__(self):
+        super().__init__(description="Fine-tune ViT5 using QLoRa")
+        self.add_lora_method()
+        self.add_adapter_output_dirs()
+
+    def add_lora_method(self):
+        self.parser.add_argument(
+            "--method",
+            type=str,
+            required=True,
+            help="LORA / DORA/ ADALORA / OLORA"
+        )
+
+    def add_adapter_output_dirs(self):
+        self.parser.add_argument(
+            "--adapter_dir",
+            type=str,
+            required=False,
+            default="model_adapter",
+            help="Where do you want to save the model's adapter?"
+        )
     
 def main():
+    # Print out running scripts
     terminal_width = shutil.get_terminal_size().columns
     print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
 
-    args = parse_args()
+    # Load command-line arguments into this script
+    args = TrainArgs().parse_args()
 
-    # 0. Read YAML Configs
+    # Load configs from YAML configuration file
     with open(args.configs, 'r', encoding='utf-8') as file:
         configs = yaml.safe_load(file)
 
     # ------------------------------------------------------------ TRAINING CONFIGS ------------------------------------------------------------
     # Model & Data    
     MODEL_NAME = configs["model"]["model_name"]
-
-    # LoRa configs
-    USE_DORA = args.use_dora
-
-    # Output directory
+    METHOD = args.method
     ADAPTER_DIR = args.adapter_dir
     CHECKPOINT_DIR = args.checkpoint_dir
 
-    print(f"Step 0: Loading configuration for {MODEL_NAME} fine-tuning completed")
+    print(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
 
     # ------------------------------------------------------------ PREPROCESSING DATA ------------------------------------------------------------
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    tokenized_dataset = get_tokenized_dataset(configs=configs, tokenizer=tokenizer)
+
+    # Tokenizing original dataset
+    tokenized_dataset = get_tokenized_dataset(
+        configs=configs,
+        tokenizer=tokenizer
+    )
     
-    print("STEP 2: PREPROCESSING DATA COMPLETED")
+    print(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
 
     # ------------------------------------------------------------ SETUP QUANTIZATION LORA MODEL FOR TRAINING ------------------------------------------------------------
-    base_model = model_quantization(model_name=MODEL_NAME)
 
-    lora_configs_kwargs = get_lora_configs_kwargs(configs=configs, use_dora=USE_DORA)
-    model = lora_configuration(base_model, lora_configs_kwargs)
+    # Initiate model for fine-tuning
+    model = get_model(
+        configs=configs,
+        method=METHOD
+    )
 
     model.print_trainable_parameters()
 
-    print(F"STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED")
+    print(f" STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED ".center(terminal_width, "="))
 
     # ------------------------------------------------------------ SETUP HYPERPARAMETERS & TRAINER ------------------------------------------------------------
 
-    # 4. Training Arguments
-    training_args_kwargs = get_training_args_kwargs(configs=configs, checkpoint_dir=CHECKPOINT_DIR)
+    # Get training arguments kwargs
+    training_args_kwargs = get_training_args_kwargs(
+        configs=configs, 
+        checkpoint_dir=CHECKPOINT_DIR
+    )
+
+    # Feed the training arguments kwargs into Seq2Seq library
     training_args = Seq2SeqTrainingArguments(**training_args_kwargs)
 
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
-    early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=5, early_stopping_threshold=0.0)
+    # Use datacollator for padding 
+    data_collator = DataCollatorForSeq2Seq(
+        tokenizer, 
+        model=model
+    )
 
-    # 5. Trainer
+    # Use early stopping to prevent overfit
+    early_stopping_callback = EarlyStoppingCallback(
+        early_stopping_patience=5, 
+        early_stopping_threshold=0.0
+    )
+
+    # Setup trainer
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
@@ -77,11 +122,11 @@ def main():
     )
 
     # Start Training
-    print(" START TRAINING ".center(terminal_width, "="))
+    print(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
 
     trainer.train()
 
-    # 6. Save Model adapter
+    # Save Model adapter & checkpoint
     save_model(
         trainer=trainer,
         tokenizer=tokenizer,

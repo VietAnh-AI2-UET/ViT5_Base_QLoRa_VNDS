@@ -1,6 +1,6 @@
 import shutil
 import yaml
-from scripts.modules.arguments import parse_args
+from scripts.modules.arguments import BaseArgs
 from scripts.modules.quantization_module import model_quantization
 from scripts.modules.lora_module import adalora_configuration
 from scripts.utils.save_model_utils import save_model
@@ -17,6 +17,15 @@ from scripts.utils.training_utils import (
     get_adalora_configs_kwargs,
     get_training_args_kwargs
 )
+
+class TrainArgs(BaseArgs):
+    def __init__(self, description="Fine-tune ViT5 for Text Summarization"):
+        super().__init__(description)
+
+    def add_adapter_dir(self):
+        self.parser.add_argument(
+            
+        )
     
 def main():
     terminal_width = shutil.get_terminal_size().columns
