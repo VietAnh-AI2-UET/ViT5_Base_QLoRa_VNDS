@@ -29,7 +29,7 @@ class TrainArgs(BaseArgs):
     def __init__(self):
         super().__init__(description="Fine-tune ViT5 using QLoRa")
         self.add_lora_method()
-        self.add_adapter_output()
+        self.add_number_of_trials()
         self.add_checkpoint_output()
 
     def add_lora_method(self):
@@ -39,13 +39,13 @@ class TrainArgs(BaseArgs):
             required=True,
             help="LORA / DORA/ ADALORA / OLORA"
         )
-    def add_adapter_output(self):
+    def add_number_of_trials(self):
         self.parser.add_argument(
-            "--adapter_dir",
-            type=str,
+            "--n_trials",
+            type=int,
             required=False,
-            default="model_adapter",
-            help="Enter model's adapter saving location"
+            default=5,
+            help="Enter number of trials to perform search"
         )
     def add_checkpoint_output(self):
         self.parser.add_argument(
@@ -91,11 +91,21 @@ def load_model(configs: dict, method: str) -> PeftModel | PeftMixedModel:
     )
     return model
 
+def hp_space(trials: Any) -> Dict[str, Any]:
+    """Define which parameter you want to perform search with Optuna"""
+    return {
+        "learning_rate": trials.suggest_float("learning_rate", 1e-5, 5e-4, log=True),
+    }
+
+def compute_objective(metrics: Dict[str, Any]) -> float:
+    """Return the target that you want to optimize (currently validation loss)"""
+    return metrics["eval_loss"]
+
 def load_trainer(
     configs: Dict[str, Any],
     tokenizer: AutoTokenizer,
     tokenized_dataset: Dict[str, Any],
-    model: Any,
+    method: str,
     checkpoint_dir: str
 ) -> Seq2SeqTrainer:
     """Initiate training args and trainer"""
@@ -105,8 +115,13 @@ def load_trainer(
     # Feed the training arguments kwargs into Seq2Seq library
     training_args = Seq2SeqTrainingArguments(**training_args_kwargs)
 
+    # Create dummy model for data collator and trainer
+    dummy_model = load_model(
+        configs=configs,
+        method=method
+    )
     # Use datacollator for padding 
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=dummy_model)
 
     # Use early stopping to prevent overfit
     early_stopping_callback = EarlyStoppingCallback(
@@ -116,7 +131,7 @@ def load_trainer(
 
     # Setup trainer
     trainer = Seq2SeqTrainer(
-        model=model,
+        model=dummy_model,
         args=training_args,
         train_dataset=tokenized_dataset['train'],
         eval_dataset=tokenized_dataset['validation'],
@@ -130,7 +145,7 @@ def load_trainer(
 def main():
     # Print out running scripts
     terminal_width = shutil.get_terminal_size().columns
-    logger.info(" RUNNING TRAIN.PY ".center(terminal_width, "="))
+    logger.info(" RUNNING HP_SEARCH.PY ".center(terminal_width, "="))
 
     # Load command-line arguments into this script
     args = TrainArgs().parse_args()
@@ -139,6 +154,7 @@ def main():
     configs = load_configs(args.configs)
 
     MODEL_NAME = configs["model"]["model_name"]
+    CHECKPOINT_DIR = args.checkpoint_dir
 
     logger.info(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
 
@@ -147,35 +163,37 @@ def main():
 
     logger.info(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
 
-    # Initiate model for fine-tuning
-    model = load_model(configs=configs, method=args.method)
-
-    model.print_trainable_parameters()
-    logger.info(f" STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED ".center(terminal_width, "="))
-
     # Load trainer
     trainer = load_trainer(
         configs=configs,
         tokenizer=tokenizer,
         tokenized_dataset=tokenized_dataset,
-        model=model,
+        method=args.method,
         checkpoint_dir=args.checkpoint_dir
     )
 
     # Start Training
     logger.info(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
 
-    trainer.train()
+    best_trial = trainer.hyperparameter_search(
+        direction="minimize",
+        backend="optuna",
+        hp_space=hp_space,
+        compute_objective=compute_objective,
+        n_trials=args.n_trials
+    )
 
     logger.info(f" TRAINING {MODEL_NAME} COMPLETED ".center(terminal_width, "="))
 
-    # Save Model adapter & checkpoint
-    save_model(
-        trainer=trainer,
-        tokenizer=tokenizer,
-        adapter_dir=args.adapter_dir,
-        checkpoint_dir=args.checkpoint_dir
-    )
+    print("="*50)
+    print("Hyperparameters searching completed!")
+    print(f"Best hp found: {best_trial.hyperparameters}")
+    print(f"Best eval_loss: {best_trial.objective}")
+    print("="*50)
 
+    shutil.make_archive(CHECKPOINT_DIR, "zip", CHECKPOINT_DIR)
+
+    print(f"Thư mục '{CHECKPOINT_DIR}' đã được nén thành công thành '{CHECKPOINT_DIR}.zip'")
+          
 if __name__ == "__main__":
     main()

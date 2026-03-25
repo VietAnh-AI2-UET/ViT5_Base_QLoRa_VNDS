@@ -16,7 +16,17 @@ logger = logging.getLogger(__name__)
 class InferArgs(BaseArgs):
     def __init__(self, description="Infering ViT5 for Text Summarization"):
         super().__init__(description)
+        self.add_adapter_output()
 
+    def add_adapter_output(self):
+        self.parser.add_argument(
+            "--adapter_dir",
+            type=str,
+            required=False,
+            default="model_adapter",
+            help="Enter model's adapter saving location"
+        )
+        
 def load_config(config_path: str) -> dict:
     """Load YAML configuration file."""
     with open(config_path, 'r', encoding='utf-8') as file:

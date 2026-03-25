@@ -15,13 +15,6 @@ class BaseArgs:
             required=True,
             help="Enter YAML training configs file path"
         )
-        self.parser.add_argument(
-            "--adapter_dir",
-            type=str,
-            required=False,
-            default="model_adapter",
-            help="Enter model's adapter saving location"
-        )
     
     def parse_args(self):
         """Parse and return arguments."""
