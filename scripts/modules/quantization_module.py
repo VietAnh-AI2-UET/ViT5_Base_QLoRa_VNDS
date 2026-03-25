@@ -4,7 +4,7 @@ from transformers import (
     AutoModelForSeq2SeqLM
     )
 
-def get_quantization_model(model_name):
+def get_quantization_model(base_model):
     """
     Combine pre-trained model with quantization technique
     """
@@ -17,10 +17,10 @@ def get_quantization_model(model_name):
     )
 
     # Load pre-trained model with quantization configs
-    base_model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_name,
+    quantization_base_model = AutoModelForSeq2SeqLM.from_pretrained(
+        base_model,
         quantization_config=bnb_config,
         device_map='auto'
     )
 
-    return base_model
+    return quantization_base_model

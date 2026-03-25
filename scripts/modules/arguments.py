@@ -16,11 +16,11 @@ class BaseArgs:
             help="Enter YAML training configs file path"
         )
         self.parser.add_argument(
-            "--checkpoint_dir",
+            "--adapter_dir",
             type=str,
             required=False,
-            default="model_checkpoint",
-            help="Where do you want to save the model's checkpoint?"
+            default="model_adapter",
+            help="Enter model's adapter saving location"
         )
     
     def parse_args(self):

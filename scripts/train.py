@@ -1,11 +1,12 @@
 import shutil
 import yaml
+from datasets import load_dataset
 from scripts.modules.arguments import BaseArgs
 from scripts.modules.data_module import get_tokenized_dataset
 from scripts.modules.model_module import get_model_for_training
 from scripts.utils.save_model_utils import save_model
 from transformers import (
-    AutoTokenizer, 
+    AutoTokenizer,
     Seq2SeqTrainingArguments, 
     Seq2SeqTrainer, 
     DataCollatorForSeq2Seq,
@@ -23,7 +24,7 @@ class TrainArgs(BaseArgs):
     def __init__(self):
         super().__init__(description="Fine-tune ViT5 using QLoRa")
         self.add_lora_method()
-        self.add_adapter_output_dirs()
+        self.add_checkpoint_output_dirs()
 
     def add_lora_method(self):
         self.parser.add_argument(
@@ -33,13 +34,13 @@ class TrainArgs(BaseArgs):
             help="LORA / DORA/ ADALORA / OLORA"
         )
 
-    def add_adapter_output_dirs(self):
+    def add_checkpoint_output_dirs(self):
         self.parser.add_argument(
-            "--adapter_dir",
+            "--checkpoint_dir",
             type=str,
             required=False,
-            default="model_adapter",
-            help="Where do you want to save the model's adapter?"
+            default="model_checkpoint",
+            help="Where do you want to save the model's checkpoint?"
         )
     
 def main():
@@ -56,6 +57,7 @@ def main():
 
     # ------------------------------------------------------------ TRAINING CONSTANTS ------------------------------------------------------------   
     MODEL_NAME = configs["model"]["model_name"]
+    DATASET_NAME = configs["model"]["dataset_name"]
     METHOD = args.method
     ADAPTER_DIR = args.adapter_dir
     CHECKPOINT_DIR = args.checkpoint_dir
@@ -66,9 +68,13 @@ def main():
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
+    # Load original dataset
+    dataset = load_dataset(DATASET_NAME)
+
     # Tokenizing original dataset
     tokenized_dataset = get_tokenized_dataset(
         configs=configs,
+        dataset=dataset,
         tokenizer=tokenizer
     )
     

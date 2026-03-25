@@ -1,109 +1,88 @@
+import shutil
 import torch
-import argparse
 import yaml
 import evaluate
-from peft import PeftModel
 from datasets import load_dataset
 from tqdm import tqdm
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSeq2SeqLM,
-    BitsAndBytesConfig,
-)
+from transformers import AutoTokenizer
+from scripts.modules.arguments import BaseArgs
+from scripts.modules.model_module import get_fine_tuned_model
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Inferencing and computing ROUGE, BERTscores")
+class InferArgs(BaseArgs):
+    def __init__(self, description="Infering ViT5 for Text Summarization"):
+        super().__init__(description)
 
-    parser.add_argument(
-        "--config",
-        type=str,
-        required=True,
-        help="YAML configs directory"
-    )
+def generate_summary(configs, tokenizer, model, text) -> str:
+    OUTPUT_MAX_LENGTH = configs["generation"]["output_max_length"]
+    OUTPUT_MIN_LENGTH = configs["generation"]["output_min_length"]
+    NUM_BEAMS = configs["generation"]["num_beams"]
+    NO_REPEAT_NGRAM_SIZE = configs["generation"]["no_repeat_ngram_size"]
+    REPETITION_PENALTY = configs["generation"]["repetition_penalty"]
+    LENGTH_PENALTY = configs["generation"]["length_penalty"]
 
-    parser.add_argument(
-        "--adapter_path",
-        type=str,
-        required=True,
-        help="Where did you saved the model's adapter?"
-    )
+    inputs = tokenizer("tóm tắt: " + text, max_length=1024, truncation=True, return_tensors='pt').to(model.device)
 
-    return parser.parse_args()
+    with torch.no_grad():
+        output = model.generate(
+            input_ids=inputs['input_ids'],
+            max_length=OUTPUT_MAX_LENGTH,
+            min_length=OUTPUT_MIN_LENGTH,            
+            num_beams=NUM_BEAMS,              
+            no_repeat_ngram_size=NO_REPEAT_NGRAM_SIZE,   
+            repetition_penalty=REPETITION_PENALTY,   
+            early_stopping=True,
+            length_penalty=LENGTH_PENALTY,
+        )
 
+    summary = tokenizer.decode(output[0], skip_special_tokens=True)
+    return summary
 
 def main():
-    args = parse_args()
-
-    # 0. Read YAML Configs
-    with open(args.config, 'r', encoding='utf-8') as file:
-        config = yaml.safe_load(file)
-
-    # Define model, dataset and adapter
-    MODEL_NAME = config["model"]["model_name"]
-    DATASET_NAME = config["model"]["dataset_name"]
-    ADAPTER_PATH = args.adapter_path
-
-    # Define generation hyperparams
-    OUTPUT_MAX_LENGTH = config["generation"]["output_max_length"]
-    OUTPUT_MIN_LENGTH = config["generation"]["output_min_length"]
-    NUM_BEAMS = config["generation"]["num_beams"]
-    NO_REPEAT_NGRAM_SIZE = config["generation"]["no_repeat_ngram_size"]
-    REPETITION_PENALTY = config["generation"]["repetition_penalty"]
-    LENGTH_PENALTY = config["generation"]["length_penalty"]
-
-    # 1. Load Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_PATH)
-
-    # 2. Load Dataset
-    dataset = load_dataset(DATASET_NAME)
-    test_dataset = dataset["test"].shuffle(seed=42).select(range(50))       # This dataset is for quick evaluation
-
-    # 3. Load Quantization configs
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type='nf4',
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True
-    )
-
-    # 4. Load 4-bits base model
-    base_model = AutoModelForSeq2SeqLM.from_pretrained(
-        MODEL_NAME,
-        quantization_config=bnb_config,
-        device_map='auto'
-    )
-
-    # 5. Combine base model and adapter
-    fine_tuned_model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
-
-    # 6. Create output generating function
-    def generate_summary(tokenizer, model, text) -> str:
-        inputs = tokenizer("tóm tắt: " + text, max_length=1024, truncation=True, return_tensors='pt').to(model.device)
-
-        with torch.no_grad():
-            output = model.generate(
-                input_ids=inputs['input_ids'],
-                max_length=OUTPUT_MAX_LENGTH,
-                min_length=OUTPUT_MIN_LENGTH,            
-                num_beams=NUM_BEAMS,              
-                no_repeat_ngram_size=NO_REPEAT_NGRAM_SIZE,   
-                repetition_penalty=REPETITION_PENALTY,   
-                early_stopping=True,
-                length_penalty=LENGTH_PENALTY,
-            )
-
-        summary = tokenizer.decode(output[0], skip_special_tokens=True)
-        return summary
+    # Print out running scripts
+    terminal_width = shutil.get_terminal_size().columns
+    print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
     
-    # 7. Start generating summarization
+    # Load command-line arguments
+    args = InferArgs().parse_args()
+
+    # Load YAML configs
+    with open(args.config, 'r', encoding='utf-8') as file:
+        configs = yaml.safe_load(file)
+
+    # ------------------------------------------------------------ TRAINING CONSTANTS ------------------------------------------------------------   
+    DATASET_NAME = configs["model"]["dataset_name"]
+    ADAPTER_DIR = args.adapter_dir
+
+    # ------------------------------------------------------------ LOAD DATASET ------------------------------------------------------------   
+    # Load Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR)
+
+    # Load original dataset
+    dataset = load_dataset(DATASET_NAME)
+
+    # Select only test set from original dataset
+    test_dataset = dataset["test"].shuffle(seed=42).select(range(50))
+
+    # ------------------------------------------------------------ LOAD FINE-TUNED MODEL ------------------------------------------------------------   
+    # Load fine tuned model
+    fine_tuned_model = get_fine_tuned_model(
+        configs=configs,
+        adapter_dir=ADAPTER_DIR
+    )
+
+    # ------------------------------------------------------------ GENERATE SUMMARIES ------------------------------------------------------------       
+    # Extract articles from test dataset
     test_articles = [item["article"] for item in test_dataset]
+
+    # Extract summarization of test_articles from test dataset
     reference_summaries = [item["abstract"] for item in test_dataset]
 
     generated_summaries = []
     for article in tqdm(test_articles, desc="Generating summaries"): # Use tqdm for progress bar
-        generated_summaries.append(generate_summary(tokenizer, fine_tuned_model, article))
+        generated_summaries.append(generate_summary(configs, tokenizer, fine_tuned_model, article))
 
-    # 8. Calculate ROUGE and BERT_scores
+    # ------------------------------------------------------------ CALCULATE ROUGE AND BERTSCORE ------------------------------------------------------------   
+    # Initiate ROUGE and BERT_scores computing object
     rouge = evaluate.load('rouge')
     bertscore = evaluate.load('bertscore')
 

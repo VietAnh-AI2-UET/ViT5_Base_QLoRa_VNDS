@@ -1,15 +1,11 @@
-from datasets import load_dataset
 
-def get_tokenized_dataset(configs, tokenizer):
+
+def get_tokenized_dataset(configs, dataset, tokenizer):
     """
     This function help tokenizing the entire dataset
     """
-    DATASET_NAME = configs["model"]["dataset_name"]
     TRAIN_SAMPLES = configs["data"]["train_samples"]
     VAL_SAMPLES = configs["data"]["val_samples"]
-
-    # Load original dataset
-    dataset = load_dataset(DATASET_NAME)
 
     # Subsample dataset
     dataset["train"] = dataset["train"].shuffle(seed=42).select(range(TRAIN_SAMPLES))                   # We only need about 6000 samples for fine-tuning
