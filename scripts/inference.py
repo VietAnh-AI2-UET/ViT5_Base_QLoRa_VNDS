@@ -2,17 +2,47 @@ import shutil
 import torch
 import yaml
 import evaluate
+import logging
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from scripts.modules.arguments import BaseArgs
 from scripts.modules.model_module import get_fine_tuned_model
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class InferArgs(BaseArgs):
     def __init__(self, description="Infering ViT5 for Text Summarization"):
         super().__init__(description)
 
-def generate_summary(configs, tokenizer, model, text) -> str:
+def load_config(config_path: str) -> dict:
+    """Load YAML configuration file."""
+    with open(config_path, 'r', encoding='utf-8') as file:
+        return yaml.safe_load(file)
+
+def load_data(configs: dict, adapter_dir: str) -> tuple:
+    """Load tokenizer and test dataset."""
+    tokenizer = AutoTokenizer.from_pretrained(adapter_dir)
+    dataset = load_dataset(configs["model"]["dataset_name"])
+    test_dataset = dataset["test"].shuffle(seed=42).select(range(50))
+    return tokenizer, test_dataset
+
+def load_model(configs: dict, adapter_dir: str):
+    """Load fine-tuned model."""
+    return get_fine_tuned_model(configs=configs, adapter_dir=adapter_dir)
+
+def generate_summaries(configs: dict, tokenizer, model, test_articles: list) -> list:
+    """Generate summaries for test articles."""
+    generated_summaries = []
+    for article in tqdm(test_articles, desc="Generating summaries"):
+        summary = generate_summary(configs, tokenizer, model, article)
+        generated_summaries.append(summary)
+    return generated_summaries
+
+def generate_summary(configs: dict, tokenizer, model, text: str) -> str:
+    """Generate summary for a single text."""
     OUTPUT_MAX_LENGTH = configs["generation"]["output_max_length"]
     OUTPUT_MIN_LENGTH = configs["generation"]["output_min_length"]
     NUM_BEAMS = configs["generation"]["num_beams"]
@@ -34,87 +64,66 @@ def generate_summary(configs, tokenizer, model, text) -> str:
             length_penalty=LENGTH_PENALTY,
         )
 
-    summary = tokenizer.decode(output[0], skip_special_tokens=True)
-    return summary
+    return tokenizer.decode(output[0], skip_special_tokens=True)
 
-def main():
-    # Print out running scripts
-    terminal_width = shutil.get_terminal_size().columns
-    print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
-    
-    # Load command-line arguments
-    args = InferArgs().parse_args()
-
-    # Load YAML configs
-    with open(args.config, 'r', encoding='utf-8') as file:
-        configs = yaml.safe_load(file)
-
-    # ------------------------------------------------------------ TRAINING CONSTANTS ------------------------------------------------------------   
-    DATASET_NAME = configs["model"]["dataset_name"]
-    ADAPTER_DIR = args.adapter_dir
-
-    # ------------------------------------------------------------ LOAD DATASET ------------------------------------------------------------   
-    # Load Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR)
-
-    # Load original dataset
-    dataset = load_dataset(DATASET_NAME)
-
-    # Select only test set from original dataset
-    test_dataset = dataset["test"].shuffle(seed=42).select(range(50))
-
-    # ------------------------------------------------------------ LOAD FINE-TUNED MODEL ------------------------------------------------------------   
-    # Load fine tuned model
-    fine_tuned_model = get_fine_tuned_model(
-        configs=configs,
-        adapter_dir=ADAPTER_DIR
-    )
-
-    # ------------------------------------------------------------ GENERATE SUMMARIES ------------------------------------------------------------       
-    # Extract articles from test dataset
-    test_articles = [item["article"] for item in test_dataset]
-
-    # Extract summarization of test_articles from test dataset
-    reference_summaries = [item["abstract"] for item in test_dataset]
-
-    generated_summaries = []
-    for article in tqdm(test_articles, desc="Generating summaries"): # Use tqdm for progress bar
-        generated_summaries.append(generate_summary(configs, tokenizer, fine_tuned_model, article))
-
-    # ------------------------------------------------------------ CALCULATE ROUGE AND BERTSCORE ------------------------------------------------------------   
-    # Initiate ROUGE and BERT_scores computing object
+def compute_metrics(generated_summaries: list, reference_summaries: list):
+    """Compute ROUGE and BERTScore metrics."""
+    # ROUGE
     rouge = evaluate.load('rouge')
-    bertscore = evaluate.load('bertscore')
-
-    # Compute ROUGE scores
     rouge_results = rouge.compute(
         predictions=generated_summaries,
         references=reference_summaries,
-        use_stemmer=True  # Use stemming for more accurate ROUGE computation
+        use_stemmer=True
     )
-
-    print("ROUGE Scores:")
+    logger.info("ROUGE Scores:")
     for key, value in rouge_results.items():
-        print(f"{key}: {value:.4f}")
+        logger.info(f"{key}: {value:.4f}")
 
-    # Compute BERTScore
-    # Note: BERTScore can be slow. You might want to sample a smaller subset if it takes too long.
-    # For Vietnamese, you might need a specific BERT model. 'bert-base-multilingual-cased' is a good general choice.
-    # Or 'vinai/phobert-base' if you have it installed and it's compatible.
-
-    print("\nCalculating BERTScore (this may take a while)...")
+    # BERTScore
+    logger.info("\nCalculating BERTScore (this may take a while)...")
+    bertscore = evaluate.load('bertscore')
     bertscore_results = bertscore.compute(
         predictions=generated_summaries,
         references=reference_summaries,
-        model_type='bert-base-multilingual-cased', # Using a multilingual BERT model
-        lang='vi' # Specify language
+        model_type='bert-base-multilingual-cased',
+        lang='vi'
     )
+    logger.info("\nBERTScore Results:")
+    logger.info(f"BERTScore F1 (mean): {sum(bertscore_results['f1']) / len(bertscore_results['f1']):.4f}")
+    logger.info(f"BERTScore Precision (mean): {sum(bertscore_results['precision']) / len(bertscore_results['precision']):.4f}")
+    logger.info(f"BERTScore Recall (mean): {sum(bertscore_results['recall']) / len(bertscore_results['recall']):.4f}")
 
-    print("\nBERTScore Results:")
-    # Print average F1 score
-    print(f"BERTScore F1 (mean): {sum(bertscore_results['f1']) / len(bertscore_results['f1']):.4f}")
-    print(f"BERTScore Precision (mean): {sum(bertscore_results['precision']) / len(bertscore_results['precision']):.4f}")
-    print(f"BERTScore Recall (mean): {sum(bertscore_results['recall']) / len(bertscore_results['recall']):.4f}")
+def main():
+    try:
+        # Print out running scripts
+        terminal_width = shutil.get_terminal_size().columns
+        print(" RUNNING INFERENCE.PY ".center(terminal_width, "="))
+        
+        # Load command-line arguments
+        args = InferArgs().parse_args()
+
+        # Load config
+        configs = load_config(args.config)
+
+        # Load data
+        tokenizer, test_dataset = load_data(configs, args.adapter_dir)
+
+        # Load model
+        model = load_model(configs, args.adapter_dir)
+
+        # Extract data
+        test_articles = [item["article"] for item in test_dataset]
+        reference_summaries = [item["abstract"] for item in test_dataset]
+
+        # Generate summaries
+        generated_summaries = generate_summaries(configs, tokenizer, model, test_articles)
+
+        # Compute metrics
+        compute_metrics(generated_summaries, reference_summaries)
+
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
