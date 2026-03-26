@@ -4,6 +4,7 @@ def get_tokenized_dataset(configs, dataset, tokenizer):
     """
     This function help tokenizing the entire dataset
     """
+    MODEL_NAME = configs["model"]["model_name"]
     TRAIN_SAMPLES = configs["data"]["train_samples"]
     VAL_SAMPLES = configs["data"]["val_samples"]
 
@@ -16,7 +17,10 @@ def get_tokenized_dataset(configs, dataset, tokenizer):
         """
         Batch (str) --> Batch (tensor)
         """
-        input_texts = ['tóm tắt: ' + txt for txt in batch['article']]
+        if MODEL_NAME == "VietAI/vit5-base":
+            input_texts = ['tóm tắt: ' + txt for txt in batch['article']]
+        elif MODEL_NAME == "vinai/bartpho-word":
+            input_texts = batch['article']
         input_max_length = 1024
         target_max_length = 256
 
