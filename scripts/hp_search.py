@@ -115,12 +115,12 @@ def load_trainer(
     # Feed the training arguments kwargs into Seq2Seq library
     training_args = Seq2SeqTrainingArguments(**training_args_kwargs)
 
-    # Create dummy model for data collator and trainer
-    dummy_model = load_model(
-        configs=configs,
-        method=method
-    )
-    # Use datacollator for padding 
+    # Define model_init function for hyperparameter search
+    def model_init():
+        return load_model(configs=configs, method=method)
+
+    # Use datacollator for padding (use dummy model for collator)
+    dummy_model = model_init()
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=dummy_model)
 
     # Use early stopping to prevent overfit
@@ -131,7 +131,7 @@ def load_trainer(
 
     # Setup trainer
     trainer = Seq2SeqTrainer(
-        model=dummy_model,
+        model_init=model_init,  # Required for hyperparameter search
         args=training_args,
         train_dataset=tokenized_dataset['train'],
         eval_dataset=tokenized_dataset['validation'],
