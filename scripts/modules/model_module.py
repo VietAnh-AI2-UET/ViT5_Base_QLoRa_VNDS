@@ -1,5 +1,5 @@
-from scripts.modules.quantization_module import get_quantization_model
-from scripts.modules.lora_module import get_peft_configs
+from .quantization_module import get_quantization_model
+from .lora_module import get_peft_configs
 from peft import (
     get_peft_model,
     PeftModel,

@@ -34,6 +34,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 echo "Start running $TRAIN_SCRIPT"
 
 # Delete the --use_dora parameter if you want to use AdaLORA
-python $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --method $METHOD --checkpoint_dir $CHECKPOINT_DIR
+python -m $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --method $METHOD --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="

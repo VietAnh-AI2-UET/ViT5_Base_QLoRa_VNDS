@@ -6,8 +6,8 @@ import logging
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from scripts.modules.arguments import BaseArgs
-from scripts.modules.model_module import get_fine_tuned_model
+from .modules.arguments import BaseArgs
+from .modules.model_module import get_fine_tuned_model
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

@@ -28,6 +28,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start inferencing
 echo "Start running $INFER_SCRIPT"
 
-python $INFER_SCRIPT --config $CONFIG_PATH --adapter_path $ADAPTER_PATH
+python -m $INFER_SCRIPT --config $CONFIG_PATH --adapter_path $ADAPTER_PATH
 
 echo "=== FINISH ==="
