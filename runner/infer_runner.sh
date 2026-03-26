@@ -6,9 +6,9 @@ set -e
 echo "=== SETTING UP INFERENCING ==="
 
 # --- IMPORTANT PATHS ---
-TEMPLATE_PATH="enter configs template file path"
-CONFIG_PATH="where do you want to save the yaml file?"
-INFER_SCRIPT="enter training script path"                     
+TEMPLATE_PATH="enter the .yaml.template file path"
+CONFIG_PATH="that .yaml.template file will create the real .yaml here"
+INFER_SCRIPT="enter the infering script that you want to run"                     
 ADAPTER_PATH="where did you save the model's adapter?"
 # --------------------------------
 

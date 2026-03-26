@@ -6,13 +6,12 @@ set -e
 echo "=== SETTING UP HYPERPARAMS SEARCHING EXPERIMENT ==="
 
 # --- IMPORTANT PATHS ---
-TEMPLATE_PATH="enter configs template file path"
-CONFIG_PATH="where do you want to save the yaml file?"
-TRAIN_SCRIPT="enter training script path"
+TEMPLATE_PATH="enter the .yaml.template file path"
+CONFIG_PATH="that .yaml.template file will create the real .yaml here"
+TRAIN_SCRIPT="enter the training script that you want to run"
 N_TRIALS=5
-USE_DORA="Which methode do you want to use? DORA --> True / LORA --> False / AdaLORA --> Delete this variable"                       
+METHOD="LORA / DORA / ADALORA / OLORA"                       
 CHECKPOINT_DIR="where do you want to save the model's checkpoint?"
-# --------------------------------
 
 # --- HYPERPARAMS ADJUSTMENT ---
 # export LEARNING_RATE=0.0003143144372398535
@@ -35,6 +34,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 echo "Start running $TRAIN_SCRIPT"
 
 # Delete the --use_dora parameter if you want to use AdaLORA
-python $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --use_dora $USE_DORA --checkpoint_dir $CHECKPOINT_DIR
+python $TRAIN_SCRIPT --config $CONFIG_PATH --n_trials $N_TRIALS --method $METHOD --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="

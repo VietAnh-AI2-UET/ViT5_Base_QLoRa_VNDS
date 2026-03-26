@@ -6,10 +6,10 @@ set -e
 echo "=== SETTING UP TRAINING EXPERIMENT ==="
 
 # --- IMPORTANT PATHS ---
-TEMPLATE_PATH="enter configs template file path"
-CONFIG_PATH="where do you want to save the yaml file?"
-TRAIN_SCRIPT="enter training script path"
-USE_DORA="Which methode do you want to use? DORA --> True / LORA --> False"                       
+TEMPLATE_PATH="enter the .yaml.template file path"
+CONFIG_PATH="that .yaml.template file will create the real .yaml here"
+TRAIN_SCRIPT="enter the training script that you want to run"
+METHOD="LORA / DORA / ADALORA / OLORA"                       
 ADAPTER_DIR="where do you want to save the model's adapter?"
 CHECKPOINT_DIR="where do you want to save the model's checkpoint?"
 # --------------------------------
@@ -26,7 +26,7 @@ apt-get install gettext
 echo "Installing requirements.txt"
 pip install -qq -r requirements.txt
 
-# Sinh file cấu hình hoàn chỉnh từ file yaml template
+# Generate YAML config file from YAML.TEMPLATE
 echo "Creating configs file at: $CONFIG_PATH"
 
 (echo "cat <<EOF"; cat $TEMPLATE_PATH; echo ""; echo "EOF") | bash > $CONFIG_PATH
@@ -34,6 +34,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start training
 echo "Start running $TRAIN_SCRIPT"
 
-python $TRAIN_SCRIPT --config $CONFIG_PATH --use_dora $USE_DORA --adapter_dir $ADAPTER_DIR --checkpoint_dir $CHECKPOINT_DIR
+python $TRAIN_SCRIPT --config $CONFIG_PATH --method $METHOD --adapter_dir $ADAPTER_DIR --checkpoint_dir $CHECKPOINT_DIR
 
 echo "=== FINISH ==="
