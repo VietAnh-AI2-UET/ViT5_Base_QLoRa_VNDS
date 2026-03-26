@@ -5,7 +5,7 @@ from peft import (
     PeftModel,
     prepare_model_for_kbit_training
 )
-from scripts.utils.training_utils import (
+from ..utils.training_utils import (
     get_peft_configs_kwargs
 )
 

@@ -15,8 +15,8 @@ def get_lora_configs_kwargs(configs):
     lora_configs_kwargs = {
         "r": configs["lora"]["lora_r"],
         "lora_alpha": configs["lora"]["lora_alpha"],
-        "lora_dropout": configs["lora"]["lora_target_module"],
-        "target_modules": configs["lora"]["lora_dropout"],
+        "lora_dropout": configs["lora"]["lora_dropout"],
+        "target_modules": configs["lora"]["lora_target_module"],
         "bias": "none",
         "task_type": "SEQ_2_SEQ_LM",
         "use_dora": False
@@ -28,8 +28,8 @@ def get_dora_configs_kwargs(configs):
     dora_configs_kwargs = {
         "r": configs["lora"]["lora_r"],
         "lora_alpha": configs["lora"]["lora_alpha"],
-        "lora_dropout": configs["lora"]["lora_target_module"],
-        "target_modules": configs["lora"]["lora_dropout"],
+        "lora_dropout": configs["lora"]["lora_dropout"],
+        "target_modules": configs["lora"]["lora_target_module"],
         "bias": "none",
         "task_type": "SEQ_2_SEQ_LM",
         "use_dora": True
@@ -58,14 +58,12 @@ def get_peft_configs_kwargs(configs, method):
     if method == "LORA":
         lora_configs_kwargs = get_lora_configs_kwargs(
             configs=configs,
-            use_dora=False
         )
         peft_configs_kwargs = lora_configs_kwargs
     
     elif method == "DORA":
-        dora_configs_kwargs = get_lora_configs_kwargs(
+        dora_configs_kwargs = get_dora_configs_kwargs(
             configs=configs,
-            use_dora=True
         )
         peft_configs_kwargs = dora_configs_kwargs
 

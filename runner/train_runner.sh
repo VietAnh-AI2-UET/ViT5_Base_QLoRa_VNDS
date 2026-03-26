@@ -8,7 +8,7 @@ echo "=== SETTING UP TRAINING EXPERIMENT ==="
 # --- IMPORTANT PATHS ---
 TEMPLATE_PATH="enter the .yaml.template file path"
 CONFIG_PATH="that .yaml.template file will create the real .yaml here"
-TRAIN_SCRIPT="enter the training script that you want to run (relative path from cwd)."
+TRAIN_SCRIPT="enter the training script that you want to run, relative path from cwd. For ex: scripts.train (with . instead of / and no .py)"
 METHOD="LORA / DORA / ADALORA / OLORA"                       
 ADAPTER_DIR="where do you want to save the model's adapter?"
 CHECKPOINT_DIR="where do you want to save the model's checkpoint?"

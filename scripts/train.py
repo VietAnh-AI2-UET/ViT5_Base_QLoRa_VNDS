@@ -130,7 +130,7 @@ def load_trainer(
 def main():
     # Print out running scripts
     terminal_width = shutil.get_terminal_size().columns
-    logger.info(" RUNNING TRAIN.PY ".center(terminal_width, "="))
+    print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
 
     # Load command-line arguments into this script
     args = TrainArgs().parse_args()
@@ -163,7 +163,7 @@ def main():
     )
 
     # Start Training
-    logger.info(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
+    print(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
 
     trainer.train()
 
