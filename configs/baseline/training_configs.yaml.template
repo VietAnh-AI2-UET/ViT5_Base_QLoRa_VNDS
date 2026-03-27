@@ -10,14 +10,14 @@ data:
 
 # Cấu hình kỹ thuật QLoRa
 lora:
-  lora_r: ${LORA_R:-8}
-  lora_alpha: ${LORA_ALPHA:-16}
+  lora_r: ${LORA_R:-16}
+  lora_alpha: ${LORA_ALPHA:-32}
   lora_target_module: ${LORA_TARGET_MODULE:-['q', 'v']}
   lora_dropout: ${LORA_DROPOUT:-0.05}
 
 # Cấu hình quá trình huấn luyện (Training Hyperparameters)
 training:
-  epochs: ${EPOCHS:-10}
+  epochs: ${EPOCHS:-15}
   batch_size: ${BATCH_SIZE:-4}
   gradient_accumulation_steps: ${GRADIENT_ACCUMULATION_STEPS:-4}
   learning_rate: ${LEARNING_RATE:-0.0002}

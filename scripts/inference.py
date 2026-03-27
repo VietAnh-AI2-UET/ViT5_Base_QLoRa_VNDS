@@ -6,7 +6,7 @@ import logging
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from .modules.arguments import BaseArgs
+from .modules.parse_module import BaseArgs
 from .modules.model_module import get_fine_tuned_model
 
 # Set up logging
