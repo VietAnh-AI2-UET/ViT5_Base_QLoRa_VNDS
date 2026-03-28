@@ -9,10 +9,6 @@ from transformers import AutoTokenizer
 from .modules.parse_module import BaseArgs
 from .modules.model_module import get_fine_tuned_model
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 class InferArgs(BaseArgs):
     def __init__(self, description="Infering ViT5 for Text Summarization"):
         super().__init__(description)
@@ -85,12 +81,12 @@ def compute_metrics(generated_summaries: list, reference_summaries: list):
         references=reference_summaries,
         use_stemmer=True
     )
-    logger.info("ROUGE Scores:")
+    print("ROUGE Scores:")
     for key, value in rouge_results.items():
-        logger.info(f"{key}: {value:.4f}")
+        print(f"{key}: {value:.4f}")
 
     # BERTScore
-    logger.info("\nCalculating BERTScore (this may take a while)...")
+    print("\nCalculating BERTScore (this may take a while)...")
     bertscore = evaluate.load('bertscore')
     bertscore_results = bertscore.compute(
         predictions=generated_summaries,
@@ -98,10 +94,10 @@ def compute_metrics(generated_summaries: list, reference_summaries: list):
         model_type='bert-base-multilingual-cased',
         lang='vi'
     )
-    logger.info("\nBERTScore Results:")
-    logger.info(f"BERTScore F1 (mean): {sum(bertscore_results['f1']) / len(bertscore_results['f1']):.4f}")
-    logger.info(f"BERTScore Precision (mean): {sum(bertscore_results['precision']) / len(bertscore_results['precision']):.4f}")
-    logger.info(f"BERTScore Recall (mean): {sum(bertscore_results['recall']) / len(bertscore_results['recall']):.4f}")
+    print("\nBERTScore Results:")
+    print(f"BERTScore F1 (mean): {sum(bertscore_results['f1']) / len(bertscore_results['f1']):.4f}")
+    print(f"BERTScore Precision (mean): {sum(bertscore_results['precision']) / len(bertscore_results['precision']):.4f}")
+    print(f"BERTScore Recall (mean): {sum(bertscore_results['recall']) / len(bertscore_results['recall']):.4f}")
 
 def main():
     try:
@@ -113,7 +109,7 @@ def main():
         args = InferArgs().parse_args()
 
         # Load config
-        configs = load_config(args.config)
+        configs = load_config(args.configs)
 
         # Load data
         tokenizer, test_dataset = load_data(configs, args.adapter_dir)
@@ -132,7 +128,7 @@ def main():
         compute_metrics(generated_summaries, reference_summaries)
 
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        print(f"An error occurred: {e}")
         raise
 
 if __name__ == "__main__":

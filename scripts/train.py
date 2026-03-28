@@ -17,10 +17,6 @@ from transformers import (
     EarlyStoppingCallback
 )
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 class TrainArgs(BaseArgs):
     """
     Parser object inherited from BaseArgs class
@@ -140,18 +136,18 @@ def main():
 
     MODEL_NAME = configs["model"]["model_name"]
 
-    logger.info(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
+    print(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
 
     # Load tokenizer & preprocessing dataset
     tokenizer, tokenized_dataset = load_tokenized_dataset(configs=configs)
 
-    logger.info(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
+    print(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
 
     # Initiate model for fine-tuning
     model = load_model(configs=configs, method=args.method)
 
     model.print_trainable_parameters()
-    logger.info(f" STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED ".center(terminal_width, "="))
+    print(f" STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED ".center(terminal_width, "="))
 
     # Load trainer
     trainer = load_trainer(
@@ -167,7 +163,7 @@ def main():
 
     trainer.train()
 
-    logger.info(f" TRAINING {MODEL_NAME} COMPLETED ".center(terminal_width, "="))
+    print(f" TRAINING {MODEL_NAME} COMPLETED ".center(terminal_width, "="))
 
     # Save Model adapter & checkpoint
     save_model(

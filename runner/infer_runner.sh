@@ -9,7 +9,7 @@ echo "=== SETTING UP INFERENCING ==="
 TEMPLATE_PATH="enter the .yaml.template file path"
 CONFIG_PATH="that .yaml.template file will create the real .yaml here"
 INFER_SCRIPT="enter the infering script that you want to run"                     
-ADAPTER_PATH="where did you save the model's adapter?"
+ADAPTER_DIR="where did you save the model's adapter?"
 # --------------------------------
 
 # install gettext for bash
@@ -28,6 +28,6 @@ echo "Creating configs file at: $CONFIG_PATH"
 # Start inferencing
 echo "Start running $INFER_SCRIPT"
 
-python -m $INFER_SCRIPT --config $CONFIG_PATH --adapter_path $ADAPTER_PATH
+python -m $INFER_SCRIPT --config $CONFIG_PATH --adapter_dir $ADAPTER_DIR
 
 echo "=== FINISH ==="

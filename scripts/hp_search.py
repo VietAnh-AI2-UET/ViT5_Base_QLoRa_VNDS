@@ -17,10 +17,6 @@ from transformers import (
     EarlyStoppingCallback
 )
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 class TrainArgs(BaseArgs):
     """
     Parser object inherited from BaseArgs class
@@ -145,7 +141,7 @@ def load_trainer(
 def main():
     # Print out running scripts
     terminal_width = shutil.get_terminal_size().columns
-    logger.info(" RUNNING HP_SEARCH.PY ".center(terminal_width, "="))
+    print(" RUNNING HP_SEARCH.PY ".center(terminal_width, "="))
 
     # Load command-line arguments into this script
     args = TrainArgs().parse_args()
@@ -156,12 +152,12 @@ def main():
     MODEL_NAME = configs["model"]["model_name"]
     CHECKPOINT_DIR = args.checkpoint_dir
 
-    logger.info(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
+    print(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
 
     # Load tokenizer & preprocessing dataset
     tokenizer, tokenized_dataset = load_tokenized_dataset(configs=configs)
 
-    logger.info(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
+    print(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
 
     # Load trainer
     trainer = load_trainer(
@@ -173,7 +169,7 @@ def main():
     )
 
     # Start Training
-    logger.info(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
+    print(f" START TRAINING {MODEL_NAME}".center(terminal_width, "="))
 
     best_trial = trainer.hyperparameter_search(
         direction="minimize",
@@ -183,7 +179,7 @@ def main():
         n_trials=args.n_trials
     )
 
-    logger.info(f" TRAINING {MODEL_NAME} COMPLETED ".center(terminal_width, "="))
+    print(f" TRAINING {MODEL_NAME} COMPLETED ".center(terminal_width, "="))
 
     print("="*50)
     print("Hyperparameters searching completed!")

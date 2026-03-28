@@ -17,10 +17,17 @@ def get_quantization_model(base_model):
     )
 
     # Load pre-trained model with quantization configs
-    quantization_base_model = AutoModelForSeq2SeqLM.from_pretrained(
-        base_model,
-        quantization_config=bnb_config,
-        device_map='auto'
-    )
+    if base_model=="VietAI/vit5-base":
+        quantization_base_model = AutoModelForSeq2SeqLM.from_pretrained(
+            base_model,
+            quantization_config=bnb_config,
+            device_map='auto'
+        )
+    elif base_model=="vinai/bartpho-word":
+        quantization_base_model = AutoModelForSeq2SeqLM.from_pretrained(
+            base_model,
+            torch_dtype=torch.bfloat16,
+            device_map='auto'
+        )
 
     return quantization_base_model

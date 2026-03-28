@@ -106,6 +106,6 @@ def get_training_args_kwargs(configs, checkpoint_dir):
         "greater_is_better": False,
         "predict_with_generate": False,
         "report_to": "tensorboard",
-        "disable_tqdm": False,
+        "disable_tqdm": True,
         "seed": 42
     }
