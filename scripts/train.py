@@ -1,7 +1,6 @@
 import shutil
-import logging
 import yaml
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from peft import PeftModel, PeftMixedModel
 from datasets import load_dataset
 from .modules.parse_module import BaseArgs
@@ -29,13 +28,19 @@ class TrainArgs(BaseArgs):
         self.add_checkpoint_output()
 
     def add_lora_method(self):
+        # this argument specify which lora method will be use for training: 
+        # normal lora or asymetric lora
+        # let name it: "method"
         self.parser.add_argument(
             "--method",
             type=str,
             required=True,
-            help="LORA / DORA/ ADALORA / OLORA"
+            help="normal / asym"
         )
+
     def add_adapter_output(self):
+        # this argument specify where will the trained model's adapter file will be stored
+        # let name it: "adapter_dir"
         self.parser.add_argument(
             "--adapter_dir",
             type=str,
@@ -43,7 +48,10 @@ class TrainArgs(BaseArgs):
             default="model_adapter",
             help="Enter model's adapter saving location"
         )
+
     def add_checkpoint_output(self):
+        # this argument specify where will the trained model's checkpoint file will be stored
+        # let name it: "checkpoint_dir"
         self.parser.add_argument(
             "--checkpoint_dir",
             type=str,
@@ -54,25 +62,23 @@ class TrainArgs(BaseArgs):
     
 def load_configs(configs_path: str) -> dict:
     """Load configs from YAML configuration file"""
+    # in this function, we will open the path to YAML config file being passed by terminal command-line
+    # after that, we will read and save all the parameters inside the variable named "configs" and return
     with open(configs_path, 'r', encoding='utf-8') as file:
         configs = yaml.safe_load(file)
     return configs
 
-def load_tokenized_dataset(configs: dict) -> tuple:
-    """Load tokenizer and preprocessing original dataset"""
-    MODEL_NAME = configs["model"]["model_name"]
-    DATASET_NAME = configs["model"]["dataset_name"]
-    # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    # Load original dataset
-    dataset = load_dataset(DATASET_NAME)
+def load_tokenized_dataset(tokenizer, dataset, configs) -> tuple:
+    """Preprocessing original dataset"""
+    
     # Tokenizing original dataset
     tokenized_dataset = get_tokenized_dataset(
         configs=configs,
         dataset=dataset,
         tokenizer=tokenizer
     )
-    return tokenizer, tokenized_dataset
+
+    return tokenized_dataset
 
 def load_model(configs: dict, method: str) -> PeftModel | PeftMixedModel:
     """
@@ -128,23 +134,55 @@ def main():
     terminal_width = shutil.get_terminal_size().columns
     print(" RUNNING TRAIN.PY ".center(terminal_width, "="))
 
-    # Load command-line arguments into this script
-    args = TrainArgs().parse_args()
+    # First of all, we have to read all the arguments 
+    # that we pass into this file through termial cmd
+    args = TrainArgs().parse()
 
-    # Load YAML configs
+    # The first argument we take from command-line is path to YAML config
+    # let this variable be: "configs"
     configs = load_configs(args.configs)
 
+    # The second argument we take from command-line is 
+    # the one that specify which LORA method will be use
+    # we'll call it: "method"
+    method = args.method
+
+    # The third argument we take from command-line is 
+    # the one that specify where the trained model's adapter file will be stored
+    # we'll call it: "adapter_dir"
+    adapter_dir = args.adapter_dir
+
+    # The forth argument we take from command-line is 
+    # the one that specify where the trained model's checkpoint file will be stored
+    # we'll call it: "checkpoint_dir"
+    checkpoint_dir = args.checkpoint_dir
+
+    # we need to get the model's name,
+    # we won't load the model now, because it could make the program crash
     MODEL_NAME = configs["model"]["model_name"]
 
+    # print out some message for easy training process tracking 
     print(f" LOADING CONFIGURATION FOR {MODEL_NAME} FINE-TUNING COMPLETED ".center(terminal_width, "="))
 
-    # Load tokenizer & preprocessing dataset
-    tokenizer, tokenized_dataset = load_tokenized_dataset(configs=configs)
+    # we'll have to get the original dataset first
+    DATASET_NAME = configs["model"]["dataset_name"]
+    dataset = load_dataset(DATASET_NAME)
 
+    # we need a tokenizer to tokenizing natural language
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    
+    # Now we have original dataset and a tokenizer, 
+    # the next step will be transforming original dataset into vector 
+    # so that the model can perform calculation
+    tokenized_dataset = load_tokenized_dataset(tokenizer, dataset, configs)
+
+    # print out a message to track progress
     print(" PREPROCESSING DATA COMPLETED ".center(terminal_width, "="))
 
-    # Initiate model for fine-tuning
-    model = load_model(configs=configs, method=args.method)
+    # ----------------------------------- CHECKPOINT -----------------------------------
+    
+    # Now we load the model
+    model = load_model(configs=configs, method=method)
 
     model.print_trainable_parameters()
     print(f" STEP 3: SETTING UP {MODEL_NAME} QUANTIZATION COMPLETED ".center(terminal_width, "="))
@@ -155,7 +193,7 @@ def main():
         tokenizer=tokenizer,
         tokenized_dataset=tokenized_dataset,
         model=model,
-        checkpoint_dir=args.checkpoint_dir
+        checkpoint_dir=checkpoint_dir
     )
 
     # Start Training
@@ -169,8 +207,8 @@ def main():
     save_model(
         trainer=trainer,
         tokenizer=tokenizer,
-        adapter_dir=args.adapter_dir,
-        checkpoint_dir=args.checkpoint_dir
+        adapter_dir=adapter_dir,
+        checkpoint_dir=checkpoint_dir
     )
 
 if __name__ == "__main__":
